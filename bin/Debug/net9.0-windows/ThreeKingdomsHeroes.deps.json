@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v9.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v9.0": {
+      "ThreeKingdomsHeroes/1.0.0": {
+        "runtime": {
+          "ThreeKingdomsHeroes.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "ThreeKingdomsHeroes/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
