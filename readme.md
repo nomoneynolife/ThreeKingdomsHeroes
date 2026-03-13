@@ -4,8 +4,8 @@
 
 ![Image](https://raw.githubusercontent.com/nomoneynolife/ThreeKingdomsHeroes/master/1.jpg)
 
-### 开源协议   
-项目的生成的代码懒得清理了，直接用把，小众，也没啥隐私   
+### 开源说明   
+项目的生成的obj bin懒得过滤了，直接用把，小众，也没啥隐私   
    
 ### 开源协议
    
