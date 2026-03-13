@@ -74,14 +74,16 @@
             </Grid.RowDefinitions>
             
             <!-- 标题区域 -->
-            <Grid Grid.Row="0" Background="#2196F3" MouseLeftButtonDown="Grid_MouseLeftButtonDown">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="梦塔防*封严武将查询工具" FontSize="24" FontWeight="Bold" Foreground="White" Margin="20,10"/>
-                <Button Grid.Column="1" x:Name="btnClose" Content="×" FontSize="24" FontWeight="Bold" Foreground="White" Background="Transparent" BorderThickness="0" Margin="0,10,20,10" Width="30" Height="30" Click="btnClose_Click"/>
-            </Grid>
+            <Border Grid.Row="0" Background="#2196F3" CornerRadius="10 10 0 0" MouseLeftButtonDown="Grid_MouseLeftButtonDown">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="梦塔防*封严武将查询工具" FontSize="24" FontWeight="Bold" Foreground="White" Margin="20,10"/>
+                    <Button Grid.Column="1" x:Name="btnClose" Content="×" FontSize="24" FontWeight="Bold" Foreground="White" Background="Transparent" BorderThickness="0" Margin="0,10,20,10" Width="30" Height="30" Click="btnClose_Click"/>
+                </Grid>
+            </Border>
             
             <!-- 主内容区域 -->
             <Grid Grid.Row="1" Margin="20">
