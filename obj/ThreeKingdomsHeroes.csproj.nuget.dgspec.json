@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\AutoBakNoDelete\\Desktop\\塔防江山谱DH_JSP\\ThreeKingdomsHeroes\\ThreeKingdomsHeroes.csproj": {}
+    "D:\\AutoBakNoDelete\\Desktop\\塔防江山谱DH_JSP\\threekingdomsheroes\\ThreeKingdomsHeroes.csproj": {}
   },
   "projects": {
-    "D:\\AutoBakNoDelete\\Desktop\\塔防江山谱DH_JSP\\ThreeKingdomsHeroes\\ThreeKingdomsHeroes.csproj": {
+    "D:\\AutoBakNoDelete\\Desktop\\塔防江山谱DH_JSP\\threekingdomsheroes\\ThreeKingdomsHeroes.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\AutoBakNoDelete\\Desktop\\塔防江山谱DH_JSP\\ThreeKingdomsHeroes\\ThreeKingdomsHeroes.csproj",
+        "projectUniqueName": "D:\\AutoBakNoDelete\\Desktop\\塔防江山谱DH_JSP\\threekingdomsheroes\\ThreeKingdomsHeroes.csproj",
         "projectName": "ThreeKingdomsHeroes",
-        "projectPath": "D:\\AutoBakNoDelete\\Desktop\\塔防江山谱DH_JSP\\ThreeKingdomsHeroes\\ThreeKingdomsHeroes.csproj",
+        "projectPath": "D:\\AutoBakNoDelete\\Desktop\\塔防江山谱DH_JSP\\threekingdomsheroes\\ThreeKingdomsHeroes.csproj",
         "packagesPath": "C:\\Users\\Administrator\\.nuget\\packages\\",
-        "outputPath": "D:\\AutoBakNoDelete\\Desktop\\塔防江山谱DH_JSP\\ThreeKingdomsHeroes\\obj\\",
+        "outputPath": "D:\\AutoBakNoDelete\\Desktop\\塔防江山谱DH_JSP\\threekingdomsheroes\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Administrator\\AppData\\Roaming\\NuGet\\NuGet.Config",

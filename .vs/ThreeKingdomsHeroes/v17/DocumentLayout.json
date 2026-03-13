@@ -35,7 +35,7 @@
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "ThreeKingdomsHeroes",
+              "Title": "ThreeKingdomsHeroes.csproj",
               "DocumentMoniker": "D:\\AutoBakNoDelete\\Desktop\\\u5854\u9632\u6C5F\u5C71\u8C31DH_JSP\\ThreeKingdomsHeroes\\ThreeKingdomsHeroes.csproj",
               "RelativeDocumentMoniker": "ThreeKingdomsHeroes.csproj",
               "ToolTip": "D:\\AutoBakNoDelete\\Desktop\\\u5854\u9632\u6C5F\u5C71\u8C31DH_JSP\\ThreeKingdomsHeroes\\ThreeKingdomsHeroes.csproj",
@@ -66,7 +66,7 @@
               "RelativeDocumentMoniker": "MainWindow.xaml.cs",
               "ToolTip": "D:\\AutoBakNoDelete\\Desktop\\\u5854\u9632\u6C5F\u5C71\u8C31DH_JSP\\ThreeKingdomsHeroes\\MainWindow.xaml.cs",
               "RelativeToolTip": "MainWindow.xaml.cs",
-              "ViewState": "AgIAAJMAAAAAAAAAAAAYwCEAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAJMAAAAAAAAAAAA1wCEAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-03-13T03:46:27.542Z",
               "EditorCaption": ""

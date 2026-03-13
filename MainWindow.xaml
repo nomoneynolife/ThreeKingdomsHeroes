@@ -5,9 +5,10 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ThreeKingdomsHeroes"
         mc:Ignorable="d"
-        Height="458" Width="800"
+        Height="480" Width="800"
         Background="Transparent"
-        WindowStyle="None" AllowsTransparency="True" ResizeMode="NoResize">
+        WindowStyle="None" AllowsTransparency="True" ResizeMode="NoResize"
+        KeyDown="Window_KeyDown" Focusable="True">
     <Window.Resources>
         <Style x:Key="CategoryButtonStyle" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
@@ -67,7 +68,7 @@
         </Style>
     </Window.Resources>
     <Border CornerRadius="10" Background="#F5F5F5" BorderThickness="1" BorderBrush="#E0E0E0">
-        <Grid>
+        <Grid Margin="0,0,0,19">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -86,7 +87,7 @@
             </Border>
             
             <!-- 主内容区域 -->
-            <Grid Grid.Row="1" Margin="20">
+            <Grid Grid.Row="1" Margin="20,20,20,55">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
@@ -104,6 +105,9 @@
                 <WrapPanel x:Name="wpHeroes" Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="10"/>
                 <TextBlock x:Name="tbNoData" Grid.Row="1" Text="请选择一个分类" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Foreground="#666666" Visibility="Visible"/>
             </Grid>
+            <CheckBox x:Name="cbAutoHammer" Content="自动释放锤子(右键)" HorizontalAlignment="Left" Height="18" Margin="130,393,0,0" Grid.Row="1" VerticalAlignment="Top" Width="124" Checked="cbAutoHammer_Checked" Unchecked="cbAutoHammer_Unchecked"/>
+            <TextBlock x:Name="tbF12Status" Text="F12状态: 未启动" HorizontalAlignment="Left" Height="20" Margin="15,391,0,0" Grid.Row="1" VerticalAlignment="Top" Width="150" FontSize="14" Foreground="#666666"/>
+            <CheckBox x:Name="cbAutoUlt" Content="自动释放大招(F1)" HorizontalAlignment="Left" Height="18" Margin="263,393,0,0" Grid.Row="1" VerticalAlignment="Top" Width="124" Checked="cbAutoUlt_Checked" Unchecked="cbAutoUlt_Unchecked"/>
         </Grid>
     </Border>
 </Window>
