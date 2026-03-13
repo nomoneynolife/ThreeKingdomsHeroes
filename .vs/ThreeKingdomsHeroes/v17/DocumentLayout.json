@@ -3,6 +3,10 @@
   "WorkspaceRootPath": "D:\\AutoBakNoDelete\\Desktop\\\u5854\u9632\u6C5F\u5C71\u8C31DH_JSP\\ThreeKingdomsHeroes\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{D18C9B1C-B63A-0639-A96D-F5736CA5A7BB}|ThreeKingdomsHeroes.csproj|d:\\autobaknodelete\\desktop\\\u5854\u9632\u6C5F\u5C71\u8C31dh_jsp\\threekingdomsheroes\\threekingdomsheroes.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|",
+      "RelativeMoniker": "D:0:0:{D18C9B1C-B63A-0639-A96D-F5736CA5A7BB}|ThreeKingdomsHeroes.csproj|solutionrelative:threekingdomsheroes.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{D18C9B1C-B63A-0639-A96D-F5736CA5A7BB}|ThreeKingdomsHeroes.csproj|d:\\autobaknodelete\\desktop\\\u5854\u9632\u6C5F\u5C71\u8C31dh_jsp\\threekingdomsheroes\\mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}",
       "RelativeMoniker": "D:0:0:{D18C9B1C-B63A-0639-A96D-F5736CA5A7BB}|ThreeKingdomsHeroes.csproj|solutionrelative:mainwindow.xaml||{F11ACC28-31D1-4C80-A34B-F4E09D3D753C}"
     },
@@ -17,10 +21,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{D18C9B1C-B63A-0639-A96D-F5736CA5A7BB}|ThreeKingdomsHeroes.csproj|d:\\autobaknodelete\\desktop\\\u5854\u9632\u6C5F\u5C71\u8C31dh_jsp\\threekingdomsheroes\\mainwindow.xaml.cs||{8B382828-6202-11D1-8870-0000F87579D2}|",
       "RelativeMoniker": "D:0:0:{D18C9B1C-B63A-0639-A96D-F5736CA5A7BB}|ThreeKingdomsHeroes.csproj|solutionrelative:mainwindow.xaml.cs||{8B382828-6202-11D1-8870-0000F87579D2}|"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{D18C9B1C-B63A-0639-A96D-F5736CA5A7BB}|ThreeKingdomsHeroes.csproj|d:\\autobaknodelete\\desktop\\\u5854\u9632\u6C5F\u5C71\u8C31dh_jsp\\threekingdomsheroes\\threekingdomsheroes.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|",
-      "RelativeMoniker": "D:0:0:{D18C9B1C-B63A-0639-A96D-F5736CA5A7BB}|ThreeKingdomsHeroes.csproj|solutionrelative:threekingdomsheroes.csproj||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
     }
   ],
   "DocumentGroupContainers": [
@@ -30,11 +30,23 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
+              "Title": "ThreeKingdomsHeroes",
+              "DocumentMoniker": "D:\\AutoBakNoDelete\\Desktop\\\u5854\u9632\u6C5F\u5C71\u8C31DH_JSP\\ThreeKingdomsHeroes\\ThreeKingdomsHeroes.csproj",
+              "RelativeDocumentMoniker": "ThreeKingdomsHeroes.csproj",
+              "ToolTip": "D:\\AutoBakNoDelete\\Desktop\\\u5854\u9632\u6C5F\u5C71\u8C31DH_JSP\\ThreeKingdomsHeroes\\ThreeKingdomsHeroes.csproj",
+              "RelativeToolTip": "ThreeKingdomsHeroes.csproj",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-03-13T06:28:18.463Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
               "Title": "ThreeKingdomsHeroes.csproj",
               "DocumentMoniker": "D:\\AutoBakNoDelete\\Desktop\\\u5854\u9632\u6C5F\u5C71\u8C31DH_JSP\\ThreeKingdomsHeroes\\ThreeKingdomsHeroes.csproj",
               "RelativeDocumentMoniker": "ThreeKingdomsHeroes.csproj",
@@ -42,12 +54,11 @@
               "RelativeToolTip": "ThreeKingdomsHeroes.csproj",
               "ViewState": "AgIAAAwAAAAAAAAAAAAAAA8AAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-03-13T03:46:43.105Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-13T03:46:43.105Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "AssemblyInfo.cs",
               "DocumentMoniker": "D:\\AutoBakNoDelete\\Desktop\\\u5854\u9632\u6C5F\u5C71\u8C31DH_JSP\\ThreeKingdomsHeroes\\AssemblyInfo.cs",
               "RelativeDocumentMoniker": "AssemblyInfo.cs",
@@ -55,12 +66,11 @@
               "RelativeToolTip": "AssemblyInfo.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-13T03:46:41.92Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-13T03:46:41.92Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "MainWindow.xaml.cs",
               "DocumentMoniker": "D:\\AutoBakNoDelete\\Desktop\\\u5854\u9632\u6C5F\u5C71\u8C31DH_JSP\\ThreeKingdomsHeroes\\MainWindow.xaml.cs",
               "RelativeDocumentMoniker": "MainWindow.xaml.cs",
@@ -68,24 +78,11 @@
               "RelativeToolTip": "MainWindow.xaml.cs",
               "ViewState": "AgIAAJMAAAAAAAAAAAA1wCEAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-13T03:46:27.542Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-13T03:46:27.542Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "ThreeKingdomsHeroes",
-              "DocumentMoniker": "D:\\AutoBakNoDelete\\Desktop\\\u5854\u9632\u6C5F\u5C71\u8C31DH_JSP\\ThreeKingdomsHeroes\\ThreeKingdomsHeroes.csproj",
-              "RelativeDocumentMoniker": "ThreeKingdomsHeroes.csproj",
-              "ToolTip": "D:\\AutoBakNoDelete\\Desktop\\\u5854\u9632\u6C5F\u5C71\u8C31DH_JSP\\ThreeKingdomsHeroes\\ThreeKingdomsHeroes.csproj",
-              "RelativeToolTip": "ThreeKingdomsHeroes.csproj",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-03-13T03:41:52.788Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "MainWindow.xaml",
               "DocumentMoniker": "D:\\AutoBakNoDelete\\Desktop\\\u5854\u9632\u6C5F\u5C71\u8C31DH_JSP\\ThreeKingdomsHeroes\\MainWindow.xaml",
               "RelativeDocumentMoniker": "MainWindow.xaml",
