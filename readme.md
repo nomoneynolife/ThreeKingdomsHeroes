@@ -2,7 +2,7 @@
 
 工具截图：
 
-![Image](&resource_key=./1.jpg)
+![Image](https://raw.githubusercontent.com/nomoneynolife/ThreeKingdomsHeroes/master/1.jpg)
 
 ### 开源协议   
 项目的生成的代码懒得清理了，直接用把，小众，也没啥隐私   
