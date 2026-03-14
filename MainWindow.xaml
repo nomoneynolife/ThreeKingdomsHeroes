@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ThreeKingdomsHeroes"
         mc:Ignorable="d"
-        Height="480" Width="800"
+        Height="494" Width="800"
         Background="Transparent"
         WindowStyle="None" AllowsTransparency="True" ResizeMode="NoResize"
         KeyDown="Window_KeyDown" Focusable="True">
@@ -67,32 +67,36 @@
             </Setter>
         </Style>
     </Window.Resources>
-    <Border CornerRadius="10" Background="#F5F5F5" BorderThickness="1" BorderBrush="#E0E0E0">
-        <Grid Margin="0,0,0,19">
+    <Border CornerRadius="10" Background="#F5F5F5" BorderThickness="1" BorderBrush="#E0E0E0" Margin="0,2,0,10">
+        <Grid Margin="0,-3,0,9">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
+                <RowDefinition Height="101*"/>
+                <RowDefinition Height="5*"/>
             </Grid.RowDefinitions>
-            
+
             <!-- 标题区域 -->
             <Border Grid.Row="0" Background="#2196F3" CornerRadius="10 10 0 0" MouseLeftButtonDown="Grid_MouseLeftButtonDown">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="106*"/>
+                        <ColumnDefinition Width="404*"/>
+                        <ColumnDefinition Width="239*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="梦塔防*封严武将查询工具" FontSize="24" FontWeight="Bold" Foreground="White" Margin="20,10"/>
-                    <Button Grid.Column="1" x:Name="btnClose" Content="×" FontSize="24" FontWeight="Bold" Foreground="White" Background="Transparent" BorderThickness="0" Margin="0,10,20,10" Width="30" Height="30" Click="btnClose_Click"/>
+                    <TextBlock Grid.Column="0" Text="梦塔防*封严武将查询工具" FontSize="24" FontWeight="Bold" Foreground="White" Margin="20,10,20,10" Grid.ColumnSpan="3"/>
+                    <Button Grid.Column="3" x:Name="btnClose" Content="×" FontSize="24" FontWeight="Bold" Foreground="White" Background="Transparent" BorderThickness="0" Margin="0,5,20,15" Width="30" Height="30" Click="btnClose_Click"/>
                 </Grid>
             </Border>
-            
+
             <!-- 主内容区域 -->
-            <Grid Grid.Row="1" Margin="20,20,20,55">
+            <Grid Grid.Row="1" Margin="20,20,20,10" Grid.RowSpan="2">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                
+
                 <!-- 分类按钮区域 -->
                 <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,20,0,20">
                     <Button x:Name="btnWei" Content="魏" Style="{StaticResource CategoryButtonStyle}" Click="btnWei_Click"/>
@@ -100,14 +104,19 @@
                     <Button x:Name="btnWu" Content="吴" Style="{StaticResource CategoryButtonStyle}" Click="btnWu_Click"/>
                     <Button x:Name="btnNeutral" Content="中立" Style="{StaticResource CategoryButtonStyle}" Click="btnNeutral_Click"/>
                 </StackPanel>
-                
+
                 <!-- 武将显示区域 -->
                 <WrapPanel x:Name="wpHeroes" Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="10"/>
                 <TextBlock x:Name="tbNoData" Grid.Row="1" Text="请选择一个分类" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="16" Foreground="#666666" Visibility="Visible"/>
+
+                <!-- 自动释放功能区域 -->
+                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0,20,0,0">
+                    <TextBlock x:Name="tbF12Status" Text="F12状态: 未启动" Height="20" Margin="0,0,20,0" FontSize="14" Foreground="#666666"/>
+                    <CheckBox x:Name="cbAutoHammer" Content="自动释放锤子(右键)" Height="18" Margin="0,0,20,0" Checked="cbAutoHammer_Checked" Unchecked="cbAutoHammer_Unchecked"/>
+                    <CheckBox x:Name="cbAutoUlt" Content="自动释放大招(F1)" Height="19" Margin="0,0,20,0" Checked="cbAutoUlt_Checked" Unchecked="cbAutoUlt_Unchecked"/>
+                    <CheckBox x:Name="cbAutoBaodabo" Content="自动升级包大伯" Height="19" Checked="cbAutoBaodabo_Checked" Unchecked="cbAutoBaodabo_Unchecked"/>
+                </StackPanel>
             </Grid>
-            <CheckBox x:Name="cbAutoHammer" Content="自动释放锤子(右键)" HorizontalAlignment="Left" Height="18" Margin="130,393,0,0" Grid.Row="1" VerticalAlignment="Top" Width="124" Checked="cbAutoHammer_Checked" Unchecked="cbAutoHammer_Unchecked"/>
-            <TextBlock x:Name="tbF12Status" Text="F12状态: 未启动" HorizontalAlignment="Left" Height="20" Margin="15,391,0,0" Grid.Row="1" VerticalAlignment="Top" Width="150" FontSize="14" Foreground="#666666"/>
-            <CheckBox x:Name="cbAutoUlt" Content="自动释放大招(F1)" HorizontalAlignment="Left" Height="18" Margin="263,393,0,0" Grid.Row="1" VerticalAlignment="Top" Width="124" Checked="cbAutoUlt_Checked" Unchecked="cbAutoUlt_Unchecked"/>
         </Grid>
     </Border>
 </Window>

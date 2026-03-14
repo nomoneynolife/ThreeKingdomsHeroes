@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -16,24 +17,41 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using Drawing = System.Drawing;
+using Forms = System.Windows.Forms;
+using OpenCvSharp;
+
+// 解决Window类命名冲突
+using WpfWindow = System.Windows.Window;
+
+// 解决命名冲突
+using WpfBrushes = System.Windows.Media.Brushes;
+using WpfColor = System.Windows.Media.Color;
+using WpfColorConverter = System.Windows.Media.ColorConverter;
 
 namespace ThreeKingdomsHeroes;
 
 /// <summary>
 /// Interaction logic for MainWindow.xaml
 /// </summary>
-public partial class MainWindow : Window
+public partial class MainWindow : WpfWindow
 {
     private List<Hero> heroes;
     private bool isF12Active = false;
     private bool isAutoHammerEnabled = false;
     private bool isAutoUltEnabled = false;
+    private bool isAutoBaodaboEnabled = false;
     private System.Threading.Timer hammerTimer;
     private System.Threading.Timer ultTimer;
+    private System.Threading.Timer processCheckTimer;
+    private System.Threading.Timer baodaboTimer;
+    private Process gameProcess = null;
     private const int HOTKEY_ID = 9000;
     private const uint MOD_NONE = 0x0000;
     private const uint VK_F12 = 0x7B;
     private const uint VK_F1 = 0x70;
+    private const uint VK_W = 0x57;
+    private const uint VK_E = 0x45;
 
     // 全局键盘钩子相关
     private const int WH_KEYBOARD_LL = 13;
@@ -77,9 +95,47 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         InitializeHeroes();
+        // 从配置文件读取自动释放功能的状态
+        LoadAutoReleaseSettings();
         // 设置全局键盘钩子
         _proc = HookCallback;
         _hookID = SetHook(_proc);
+    }
+
+    private void LoadAutoReleaseSettings()
+    {
+        // 从app.config读取自动释放锤子的状态
+        string autoHammerEnabled = ConfigurationManager.AppSettings["AutoHammerEnabled"];
+        if (!string.IsNullOrEmpty(autoHammerEnabled))
+        {
+            bool enabled = bool.TryParse(autoHammerEnabled, out bool result) && result;
+            cbAutoHammer.IsChecked = enabled;
+            isAutoHammerEnabled = enabled;
+        }
+
+        // 从app.config读取自动释放大招的状态
+        string autoUltEnabled = ConfigurationManager.AppSettings["AutoUltEnabled"];
+        if (!string.IsNullOrEmpty(autoUltEnabled))
+        {
+            bool enabled = bool.TryParse(autoUltEnabled, out bool result) && result;
+            cbAutoUlt.IsChecked = enabled;
+            isAutoUltEnabled = enabled;
+        }
+
+        // 从app.config读取自动升级包大伯的状态，默认启用
+        string autoBaodaboEnabled = ConfigurationManager.AppSettings["AutoBaodaboEnabled"];
+        if (!string.IsNullOrEmpty(autoBaodaboEnabled))
+        {
+            bool enabled = bool.TryParse(autoBaodaboEnabled, out bool result) && result;
+            cbAutoBaodabo.IsChecked = enabled;
+            isAutoBaodaboEnabled = enabled;
+        }
+        else
+        {
+            // 默认启用
+            cbAutoBaodabo.IsChecked = true;
+            isAutoBaodaboEnabled = true;
+        }
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -123,8 +179,8 @@ public partial class MainWindow : Window
             bool success = UnregisterHotKey(source.Handle, HOTKEY_ID);
             System.Diagnostics.Debug.WriteLine($"热键注销成功: {success}");
         }
-        hammerTimer?.Dispose();
-        ultTimer?.Dispose();
+        // 停止所有定时器
+        StopAllTimers();
         base.OnClosed(e);
     }
 
@@ -251,9 +307,9 @@ public partial class MainWindow : Window
             {
                 Border heroBorder = new Border
                 {
-                    Background = Brushes.White,
+                    Background = WpfBrushes.White,
                     BorderThickness = new Thickness(1),
-                    BorderBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#E0E0E0")),
+                    BorderBrush = new SolidColorBrush((WpfColor)WpfColorConverter.ConvertFromString("#E0E0E0")),
                     CornerRadius = new CornerRadius(6),
                     Padding = new Thickness(20, 15, 20, 15),
                     Margin = new Thickness(10, 10, 10, 10),
@@ -266,9 +322,9 @@ public partial class MainWindow : Window
                 {
                     Text = hero.Name,
                     FontSize = 14,
-                    Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#333333")),
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    VerticalAlignment = VerticalAlignment.Center
+                    Foreground = new SolidColorBrush((WpfColor)WpfColorConverter.ConvertFromString("#333333")),
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                    VerticalAlignment = System.Windows.VerticalAlignment.Center
                 };
                 
                 heroBorder.Child = heroText;
@@ -298,19 +354,13 @@ public partial class MainWindow : Window
         
         if (isF12Active)
         {
-            if (isAutoHammerEnabled)
-            {
-                StartHammerTimer();
-            }
-            if (isAutoUltEnabled)
-            {
-                StartUltTimer();
-            }
+            // 启动进程监控
+            StartProcessMonitoring();
         }
         else
         {
-            StopHammerTimer();
-            StopUltTimer();
+            // 停止所有定时器
+            StopAllTimers();
         }
     }
 
@@ -319,12 +369,12 @@ public partial class MainWindow : Window
         if (isF12Active)
         {
             tbF12Status.Text = "F12状态: 已启动";
-            tbF12Status.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#4CAF50"));
+            tbF12Status.Foreground = new SolidColorBrush((WpfColor)WpfColorConverter.ConvertFromString("#4CAF50"));
         }
         else
         {
             tbF12Status.Text = "F12状态: 未启动";
-            tbF12Status.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#666666"));
+            tbF12Status.Foreground = new SolidColorBrush((WpfColor)WpfColorConverter.ConvertFromString("#666666"));
         }
     }
 
@@ -332,7 +382,8 @@ public partial class MainWindow : Window
     {
         if (hammerTimer == null)
         {
-            hammerTimer = new System.Threading.Timer(CheckProcessAndClick, null, 0, 5000);
+            int interval = GetIntervalFromConfig("HammerInterval", 2000);
+            hammerTimer = new System.Threading.Timer(CheckProcessAndClick, null, 0, interval);
         }
     }
 
@@ -349,7 +400,8 @@ public partial class MainWindow : Window
     {
         if (ultTimer == null)
         {
-            ultTimer = new System.Threading.Timer(CheckProcessAndPressF1, null, 0, 500);
+            int interval = GetIntervalFromConfig("UltInterval", 500);
+            ultTimer = new System.Threading.Timer(CheckProcessAndPressF1, null, 0, interval);
         }
     }
 
@@ -362,63 +414,231 @@ public partial class MainWindow : Window
         }
     }
 
+    private void StartBaodaboTimer()
+    {
+        if (baodaboTimer == null)
+        {
+            int interval = GetIntervalFromConfig("BaodaboCheckInterval", 5000);
+            baodaboTimer = new System.Threading.Timer(CheckBaodaboIcons, null, 0, interval);
+        }
+    }
+
+    private void StopBaodaboTimer()
+    {
+        if (baodaboTimer != null)
+        {
+            baodaboTimer.Dispose();
+            baodaboTimer = null;
+        }
+    }
+
+    private int GetIntervalFromConfig(string key, int defaultValue)
+    {
+        string intervalStr = ConfigurationManager.AppSettings[key];
+        if (int.TryParse(intervalStr, out int interval) && interval > 0)
+        {
+            return interval;
+        }
+        return defaultValue;
+    }
+
+    private void StartProcessMonitoring()
+    {
+        // 启动时检查进程
+        if (CheckAndSubscribeProcess())
+        {
+            // 进程存在，开始执行操作
+            StartActiveTimers();
+        }
+        else
+        {
+            // 进程不存在，启动较低频率的轮询检查
+            StartProcessCheckTimer();
+        }
+    }
+
+    private bool CheckAndSubscribeProcess()
+    {
+        // 检查TDClient或TDClient.bin进程
+        Process[] processes = Process.GetProcessesByName("TDClient");
+        if (processes.Length == 0)
+        {
+            processes = Process.GetProcessesByName("TDClient.bin");
+        }
+
+        if (processes.Length > 0)
+        {
+            // 找到进程，订阅Exited事件
+            gameProcess = processes[0];
+            gameProcess.EnableRaisingEvents = true;
+            gameProcess.Exited += GameProcess_Exited;
+            return true;
+        }
+        return false;
+    }
+
+    private void GameProcess_Exited(object sender, EventArgs e)
+    {
+        // 进程退出，停止所有定时器
+        StopAllTimers();
+        // 开始轮询检查进程
+        StartProcessCheckTimer();
+    }
+
+    private void StartProcessCheckTimer()
+    {
+        // 启动较低频率的轮询检查（每5秒）
+        if (processCheckTimer == null)
+        {
+            processCheckTimer = new System.Threading.Timer(CheckProcessPeriodically, null, 0, 5000);
+        }
+    }
+
+    private void CheckProcessPeriodically(object state)
+    {
+        if (CheckAndSubscribeProcess())
+        {
+            // 进程存在，停止轮询检查
+            StopProcessCheckTimer();
+            // 开始执行操作
+            StartActiveTimers();
+        }
+    }
+
+    private void StopProcessCheckTimer()
+    {
+        if (processCheckTimer != null)
+        {
+            processCheckTimer.Dispose();
+            processCheckTimer = null;
+        }
+    }
+
+    private void StartActiveTimers()
+    {
+        // 开始所有激活的定时器
+        if (isAutoHammerEnabled && isF12Active)
+        {
+            StartHammerTimer();
+        }
+        if (isAutoUltEnabled && isF12Active)
+        {
+            StartUltTimer();
+        }
+        if (isAutoBaodaboEnabled && isF12Active)
+        {
+            StartBaodaboTimer();
+        }
+    }
+
+    private void StopAllTimers()
+    {
+        // 停止所有定时器
+        StopHammerTimer();
+        StopUltTimer();
+        StopBaodaboTimer();
+        StopProcessCheckTimer();
+    }
+
     private void CheckProcessAndClick(object state)
     {
-        // 检查TDClient.bin进程
-        bool processExists = Process.GetProcessesByName("TDClient").Length > 0 || Process.GetProcessesByName("TDClient.bin").Length > 0;
-        
-        if (processExists)
-        {
-            // 模拟右键点击
-            mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
-            Thread.Sleep(50);
-            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
-        }
+        // 直接执行操作，因为我们已经通过其他方式确保进程存在
+        // 模拟右键点击
+        mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
+        Thread.Sleep(50);
+        mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
     }
 
     private void CheckProcessAndPressF1(object state)
     {
-        // 检查TDClient.bin进程
-        bool processExists = Process.GetProcessesByName("TDClient").Length > 0 || Process.GetProcessesByName("TDClient.bin").Length > 0;
-        
-        if (processExists)
-        {
-            // 模拟F1键按下
-            keybd_event((byte)VK_F1, 0, KEYEVENTF_KEYDOWN, 0);
-            Thread.Sleep(50);
-            keybd_event((byte)VK_F1, 0, KEYEVENTF_KEYUP, 0);
-        }
+        // 直接执行操作，因为我们已经通过其他方式确保进程存在
+        // 模拟F1键按下
+        keybd_event((byte)VK_F1, 0, KEYEVENTF_KEYDOWN, 0);
+        Thread.Sleep(50);
+        keybd_event((byte)VK_F1, 0, KEYEVENTF_KEYUP, 0);
     }
 
     private void cbAutoHammer_Checked(object sender, RoutedEventArgs e)
     {
         isAutoHammerEnabled = true;
+        // 保存到配置文件
+        SaveAutoSetting("AutoHammerEnabled", true);
         if (isF12Active)
         {
-            StartHammerTimer();
+            // 重新启动进程监控，确保使用新的设置
+            StopAllTimers();
+            StartProcessMonitoring();
         }
     }
 
     private void cbAutoHammer_Unchecked(object sender, RoutedEventArgs e)
     {
         isAutoHammerEnabled = false;
+        // 保存到配置文件
+        SaveAutoSetting("AutoHammerEnabled", false);
         StopHammerTimer();
     }
 
     private void cbAutoUlt_Checked(object sender, RoutedEventArgs e)
     {
         isAutoUltEnabled = true;
+        // 保存到配置文件
+        SaveAutoSetting("AutoUltEnabled", true);
         if (isF12Active)
         {
-            StartUltTimer();
+            // 重新启动进程监控，确保使用新的设置
+            StopAllTimers();
+            StartProcessMonitoring();
         }
     }
 
     private void cbAutoUlt_Unchecked(object sender, RoutedEventArgs e)
     {
         isAutoUltEnabled = false;
+        // 保存到配置文件
+        SaveAutoSetting("AutoUltEnabled", false);
         StopUltTimer();
     }
+
+    private void SaveAutoSetting(string key, bool enabled)
+    {
+        try
+        {
+            Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            config.AppSettings.Settings[key].Value = enabled.ToString();
+            config.Save(ConfigurationSaveMode.Modified);
+            ConfigurationManager.RefreshSection("appSettings");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"保存自动设置失败 [{key}]: {ex.Message}");
+        }
+    }
+
+
+
+    private void cbAutoBaodabo_Checked(object sender, RoutedEventArgs e)
+    {
+        isAutoBaodaboEnabled = true;
+        // 保存到配置文件
+        SaveAutoSetting("AutoBaodaboEnabled", true);
+        if (isF12Active)
+        {
+            // 重新启动进程监控，确保使用新的设置
+            StopAllTimers();
+            StartProcessMonitoring();
+        }
+    }
+
+    private void cbAutoBaodabo_Unchecked(object sender, RoutedEventArgs e)
+    {
+        isAutoBaodaboEnabled = false;
+        // 保存到配置文件
+        SaveAutoSetting("AutoBaodaboEnabled", false);
+        StopBaodaboTimer();
+    }
+
+
 
     private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
@@ -427,6 +647,217 @@ public partial class MainWindow : Window
             ToggleF12Status();
             e.Handled = true;
         }
+    }
+
+    private void CheckBaodaboIcons(object state)
+    {
+        try
+        {
+            // 优先检测包大伯建造图标
+            bool foundBuild = CheckImageOnScreen(@"d:\AutoBakNoDelete\Desktop\塔防江山谱DH_JSP\ThreeKingdomsHeroes\photos\包大伯.png");
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 检测到包大伯建造图标: {foundBuild}");
+            
+            if (foundBuild)
+            {
+                // 模拟按下W键
+                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 按下W键建造包大伯");
+                keybd_event((byte)VK_W, 0, KEYEVENTF_KEYDOWN, 0);
+                Thread.Sleep(50);
+                keybd_event((byte)VK_W, 0, KEYEVENTF_KEYUP, 0);
+                return;
+            }
+            
+            // 检测包大伯升级图标
+            bool foundUpgrade = CheckImageOnScreen(@"d:\AutoBakNoDelete\Desktop\塔防江山谱DH_JSP\ThreeKingdomsHeroes\photos\包大伯升级.png");
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 检测到包大伯升级图标: {foundUpgrade}");
+            
+            if (foundUpgrade)
+            {
+                // 模拟按下E键
+                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 按下E键升级包大伯");
+                keybd_event((byte)VK_E, 0, KEYEVENTF_KEYDOWN, 0);
+                Thread.Sleep(50);
+                keybd_event((byte)VK_E, 0, KEYEVENTF_KEYUP, 0);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 检测包大伯图标失败: {ex.Message}");
+        }
+    }
+
+    private bool CheckImageOnScreen(string imagePath)
+    {
+        try
+        {
+            // 确保图像文件存在
+            if (!System.IO.File.Exists(imagePath))
+            {
+                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 图像文件不存在: {imagePath}");
+                return false;
+            }
+            
+            // 加载模板图像
+            using (var template = Cv2.ImRead(imagePath, ImreadModes.Color))
+            {
+                if (template.Empty())
+                {
+                    System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 无法加载模板图像: {imagePath}");
+                    return false;
+                }
+                
+                // 捕获屏幕
+                using (var screenBmp = new Drawing.Bitmap(Forms.Screen.PrimaryScreen.Bounds.Width, Forms.Screen.PrimaryScreen.Bounds.Height))
+                {
+                    using (var g = Drawing.Graphics.FromImage(screenBmp))
+                    {
+                        g.CopyFromScreen(0, 0, 0, 0, screenBmp.Size);
+                    }
+                    
+                    // 将Bitmap保存到临时文件
+                    string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"screen_{DateTime.Now.ToString("HHmmssfff")}.bmp");
+                    screenBmp.Save(tempPath, Drawing.Imaging.ImageFormat.Bmp);
+                    
+                    // 加载屏幕图像
+                    using (var screenMat = Cv2.ImRead(tempPath, ImreadModes.Color))
+                    {
+                        // 删除临时文件
+                        System.IO.File.Delete(tempPath);
+                        
+                        if (screenMat.Empty())
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 无法加载屏幕图像");
+                            return false;
+                        }
+                        
+                        // 转换为灰度图像
+                        using (var grayScreen = new Mat())
+                        using (var grayTemplate = new Mat())
+                        {
+                            Cv2.CvtColor(screenMat, grayScreen, ColorConversionCodes.BGR2GRAY);
+                            Cv2.CvtColor(template, grayTemplate, ColorConversionCodes.BGR2GRAY);
+                            
+                            // 直方图均衡化，提高对比度
+                            using (var equalizedScreen = new Mat())
+                            {
+                                Cv2.EqualizeHist(grayScreen, equalizedScreen);
+                                
+                                // 多尺度匹配
+                                double minVal = double.MaxValue;
+                                OpenCvSharp.Point minLoc = new OpenCvSharp.Point();
+                                double maxVal = double.MinValue;
+                                OpenCvSharp.Point maxLoc = new OpenCvSharp.Point();
+                                
+                                // 尝试不同的缩放比例
+                                for (double scale = 0.8; scale <= 1.2; scale += 0.1)
+                                {
+                                    using (var resizedTemplate = new Mat())
+                                    {
+                                        Cv2.Resize(grayTemplate, resizedTemplate, new OpenCvSharp.Size(), scale, scale);
+                                        
+                                        // 确保模板尺寸小于屏幕尺寸
+                                        if (resizedTemplate.Rows > equalizedScreen.Rows || resizedTemplate.Cols > equalizedScreen.Cols)
+                                        {
+                                            continue;
+                                        }
+                                        
+                                        using (var result = new Mat())
+                                        {
+                                            // 使用多种匹配方法
+                                            OpenCvSharp.TemplateMatchModes[] methods = { 
+                                                OpenCvSharp.TemplateMatchModes.SqDiffNormed, 
+                                                OpenCvSharp.TemplateMatchModes.CCorrNormed, 
+                                                OpenCvSharp.TemplateMatchModes.CCoeffNormed 
+                                            };
+                                            
+                                            foreach (var method in methods)
+                                            {
+                                                Cv2.MatchTemplate(equalizedScreen, resizedTemplate, result, method);
+                                                Cv2.MinMaxLoc(result, out double methodMinVal, out double methodMaxVal, out OpenCvSharp.Point methodMinLoc, out OpenCvSharp.Point methodMaxLoc);
+                                                
+                                                // 记录最佳匹配
+                                                if (method == OpenCvSharp.TemplateMatchModes.SqDiffNormed)
+                                                {
+                                                    if (methodMinVal < minVal)
+                                                    {
+                                                        minVal = methodMinVal;
+                                                        minLoc = methodMinLoc;
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    if (methodMaxVal > maxVal)
+                                                    {
+                                                        maxVal = methodMaxVal;
+                                                        maxLoc = methodMaxLoc;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // 检查是否找到匹配
+                                bool foundMatch = false;
+                                
+                                // 对于SqDiffNormed，值越小越好
+                                if (minVal < 0.05)
+                                {
+                                    foundMatch = true;
+                                    System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 使用SqDiffNormed找到匹配，值: {minVal:F4}");
+                                }
+                                // 对于其他方法，值越大越好
+                                else if (maxVal > 0.95)
+                                {
+                                    foundMatch = true;
+                                    System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 使用其他方法找到匹配，值: {maxVal:F4}");
+                                }
+                                
+                                if (foundMatch)
+                                {
+                                    // 保存检测到的彩色图像，以便调试
+                                    /* 调试开始
+                                    try
+                                    {
+                                        // 创建保存目录
+                                        string saveDir = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(imagePath), "detected");
+                                        if (!System.IO.Directory.Exists(saveDir))
+                                        {
+                                            System.IO.Directory.CreateDirectory(saveDir);
+                                        }
+                                        
+                                        // 提取匹配区域（从彩色屏幕图像中提取）
+                                        int templateWidth = grayTemplate.Cols;
+                                        int templateHeight = grayTemplate.Rows;
+                                        var matchRegion = new OpenCvSharp.Rect(maxLoc.X, maxLoc.Y, templateWidth, templateHeight);
+                                        var regionMat = screenMat[matchRegion];
+                                        
+                                        // 保存彩色图像
+                                        string fileName = System.IO.Path.GetFileNameWithoutExtension(imagePath);
+                                        string savePath = System.IO.Path.Combine(saveDir, $"{fileName}_{DateTime.Now.ToString("HHmmssfff")}.png");
+                                        Cv2.ImWrite(savePath, regionMat);
+                                        System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 检测到的彩色图像已保存到: {savePath}");
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"保存检测图像失败: {ex.Message}");
+                                    }
+                                    调试结束 */
+                                    
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 检测图像失败: {ex.Message}");
+        }
+        
+        return false;
     }
 }
 
