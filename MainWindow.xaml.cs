@@ -1,10 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,8 +10,6 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using Drawing = System.Drawing;
@@ -400,8 +395,9 @@ public partial class MainWindow : WpfWindow
     {
         if (ultTimer == null)
         {
-            int interval = GetIntervalFromConfig("UltInterval", 500);
+            int interval = GetIntervalFromConfig("UltInterval", 80); // 将默认间隔从500ms改为80ms，实现低延迟响应
             ultTimer = new System.Threading.Timer(CheckProcessAndPressF1, null, 0, interval);
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 自动释放大招定时器已启动，间隔: {interval}ms");
         }
     }
 
@@ -542,20 +538,631 @@ public partial class MainWindow : WpfWindow
 
     private void CheckProcessAndClick(object state)
     {
-        // 直接执行操作，因为我们已经通过其他方式确保进程存在
-        // 模拟右键点击
-        mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
-        Thread.Sleep(50);
-        mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+        try
+        {
+            // 加载锤子区域配置
+            LoadHammerArea();
+            
+            // 确保区域有效
+            if (hammerAreaRect.Width <= 0 || hammerAreaRect.Height <= 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 锤子区域无效");
+                return;
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 锤子区域: {hammerAreaRect}");
+            
+            // 截取锤子区域
+            using (var hammerBmp = CaptureArea(hammerAreaRect))
+            {
+                // 将Bitmap转换为Mat
+                using (var hammerMat = OpenCvSharp.Extensions.BitmapConverter.ToMat(hammerBmp))
+                {
+                    // 计算图像亮度
+                    double brightness = CalculateBrightness(hammerMat);
+                    System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 锤子图标亮度: {brightness}");
+                    
+                    // 亮度阈值，需要根据实际游戏调整
+                    if (brightness > 100)
+                    {
+                        // 模拟右键点击
+                        System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 锤子就绪，执行右键点击");
+                        mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
+                        Thread.Sleep(50);
+                        mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
+                        // 防止重复触发
+                        Thread.Sleep(120);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 检测锤子就绪失败: {ex.Message}");
+        }
     }
 
     private void CheckProcessAndPressF1(object state)
     {
-        // 直接执行操作，因为我们已经通过其他方式确保进程存在
-        // 模拟F1键按下
-        keybd_event((byte)VK_F1, 0, KEYEVENTF_KEYDOWN, 0);
-        Thread.Sleep(50);
-        keybd_event((byte)VK_F1, 0, KEYEVENTF_KEYUP, 0);
+        try
+        {
+            // 检查技能是否就绪
+            if (IsSkillReady())
+            {
+                // 模拟F1键按下
+                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 技能就绪，按下F1键");
+                keybd_event((byte)VK_F1, 0, KEYEVENTF_KEYDOWN, 0);
+                Thread.Sleep(30);
+                keybd_event((byte)VK_F1, 0, KEYEVENTF_KEYUP, 0);
+                // 防止重复触发
+                Thread.Sleep(120);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 检测技能就绪失败: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 检查技能是否就绪（CD好了）
+    /// </summary>
+    private bool IsSkillReady()
+    {
+        try
+        {
+            // 加载技能区域配置
+            LoadSkillArea();
+            
+            // 确保技能区域有效
+            if (skillAreaRect.Width <= 0 || skillAreaRect.Height <= 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 技能区域无效");
+                return false;
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 技能区域: {skillAreaRect}");
+            
+            // 截取技能区域
+            using (var skillBmp = CaptureArea(skillAreaRect))
+            {
+                // 将Bitmap转换为Mat
+                using (var skillMat = OpenCvSharp.Extensions.BitmapConverter.ToMat(skillBmp))
+                {
+                    // 这里需要加载技能就绪的模板图像
+                    // 暂时使用简单的亮度检测，实际应用中应该使用模板匹配
+                    // 计算图像亮度
+                    double brightness = CalculateBrightness(skillMat);
+                    System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 技能图标亮度: {brightness}");
+                    
+                    // 亮度阈值，需要根据实际游戏调整
+                    return brightness > 100;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 检查技能就绪失败: {ex.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// 截取指定区域的屏幕
+    /// </summary>
+    private System.Drawing.Bitmap CaptureArea(System.Drawing.Rectangle rect)
+    {
+        var bmp = new System.Drawing.Bitmap(rect.Width, rect.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+        using (var g = System.Drawing.Graphics.FromImage(bmp))
+        {
+            g.CopyFromScreen(rect.Left, rect.Top, 0, 0, rect.Size);
+        }
+        return bmp;
+    }
+
+    /// <summary>
+    /// 计算图像亮度
+    /// </summary>
+    private double CalculateBrightness(Mat mat)
+    {
+        using (var gray = new Mat())
+        {
+            Cv2.CvtColor(mat, gray, ColorConversionCodes.BGR2GRAY);
+            return Cv2.Mean(gray).Val0;
+        }
+    }
+
+    // 区域调整相关字段
+    private System.Windows.Window skillAreaWindow;
+    private System.Windows.Window hammerAreaWindow;
+    private System.Windows.Window baodaboAreaWindow;
+    private bool isDragging = false;
+    private System.Windows.Point dragStartPoint;
+    private System.Drawing.Rectangle skillAreaRect;
+    private System.Drawing.Rectangle hammerAreaRect;
+    private System.Drawing.Rectangle baodaboAreaRect;
+
+    // 窗口相关API
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    /// <summary>
+    /// 显示区域调整窗口
+    /// </summary>
+    private System.Windows.Window ShowAreaWindow(string title, string tooltip, System.Drawing.Rectangle rect, System.Windows.Media.Color color)
+    {
+        // 创建区域窗口
+        System.Windows.Window window = new System.Windows.Window
+        {
+            Title = title,
+            ToolTip = tooltip,
+            Width = rect.Width,
+            Height = rect.Height,
+            Left = rect.Left,
+            Top = rect.Top,
+            WindowStyle = System.Windows.WindowStyle.None,
+            AllowsTransparency = true,
+            Background = new System.Windows.Media.SolidColorBrush(color),
+            BorderThickness = new System.Windows.Thickness(2),
+            BorderBrush = System.Windows.Media.Brushes.Red,
+            ResizeMode = System.Windows.ResizeMode.CanResizeWithGrip,
+            ShowInTaskbar = false,
+            Topmost = true
+        };
+        
+        // 添加鼠标事件处理
+        window.MouseLeftButtonDown += (sender, e) => {
+            isDragging = true;
+            dragStartPoint = e.GetPosition(window);
+            window.CaptureMouse();
+        };
+        
+        window.MouseMove += (sender, e) => {
+            if (isDragging)
+            {
+                System.Windows.Point currentPoint = e.GetPosition(window);
+                double deltaX = currentPoint.X - dragStartPoint.X;
+                double deltaY = currentPoint.Y - dragStartPoint.Y;
+                
+                window.Left += deltaX;
+                window.Top += deltaY;
+            }
+        };
+        
+        window.MouseLeftButtonUp += (sender, e) => {
+            isDragging = false;
+            window.ReleaseMouseCapture();
+        };
+        
+        // 显示窗口
+        window.Show();
+        return window;
+    }
+
+    /// <summary>
+    /// 隐藏区域调整窗口
+    /// </summary>
+    private System.Drawing.Rectangle HideAreaWindow(System.Windows.Window window)
+    {
+        System.Drawing.Rectangle rect = new System.Drawing.Rectangle(0, 0, 0, 0);
+        if (window != null)
+        {
+            // 保存当前窗口位置和大小
+            rect = new System.Drawing.Rectangle(
+                (int)window.Left,
+                (int)window.Top,
+                (int)window.Width,
+                (int)window.Height
+            );
+            
+            window.Close();
+        }
+        return rect;
+    }
+
+    /// <summary>
+    /// 显示技能区域调整窗口
+    /// </summary>
+    private void ShowSkillAreaWindow()
+    {
+        // 加载保存的技能区域
+        LoadSkillArea();
+        
+        // 创建技能区域窗口
+        skillAreaWindow = ShowAreaWindow(
+            "技能区域 (F1)", 
+            "用于检测大招技能是否就绪，触发F1键", 
+            skillAreaRect, 
+            System.Windows.Media.Color.FromArgb(50, 255, 0, 0)
+        );
+    }
+
+    /// <summary>
+    /// 隐藏技能区域调整窗口
+    /// </summary>
+    private void HideSkillAreaWindow()
+    {
+        if (skillAreaWindow != null)
+        {
+            // 保存当前窗口位置和大小
+            skillAreaRect = HideAreaWindow(skillAreaWindow);
+            skillAreaWindow = null;
+        }
+    }
+
+    /// <summary>
+    /// 显示锤子区域调整窗口
+    /// </summary>
+    private void ShowHammerAreaWindow()
+    {
+        // 加载保存的锤子区域
+        LoadHammerArea();
+        
+        // 创建锤子区域窗口
+        hammerAreaWindow = ShowAreaWindow(
+            "锤子区域 (右键)", 
+            "用于检测锤子技能是否就绪，触发右键点击", 
+            hammerAreaRect, 
+            System.Windows.Media.Color.FromArgb(50, 0, 255, 0)
+        );
+    }
+
+    /// <summary>
+    /// 隐藏锤子区域调整窗口
+    /// </summary>
+    private void HideHammerAreaWindow()
+    {
+        if (hammerAreaWindow != null)
+        {
+            // 保存当前窗口位置和大小
+            hammerAreaRect = HideAreaWindow(hammerAreaWindow);
+            hammerAreaWindow = null;
+        }
+    }
+
+    /// <summary>
+    /// 显示包大伯区域调整窗口
+    /// </summary>
+    private void ShowBaodaboAreaWindow()
+    {
+        // 加载保存的包大伯区域
+        LoadBaodaboArea();
+        
+        // 创建包大伯区域窗口
+        baodaboAreaWindow = ShowAreaWindow(
+            "包大伯区域 (W/E)", 
+            "用于检测包大伯建造/升级图标，触发W/E键", 
+            baodaboAreaRect, 
+            System.Windows.Media.Color.FromArgb(50, 0, 0, 255)
+        );
+    }
+
+    /// <summary>
+    /// 隐藏包大伯区域调整窗口
+    /// </summary>
+    private void HideBaodaboAreaWindow()
+    {
+        if (baodaboAreaWindow != null)
+        {
+            // 保存当前窗口位置和大小
+            baodaboAreaRect = HideAreaWindow(baodaboAreaWindow);
+            baodaboAreaWindow = null;
+        }
+    }
+
+    /// <summary>
+    /// 鼠标按下事件
+    /// </summary>
+    private void SkillAreaWindow_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        isDragging = true;
+        dragStartPoint = e.GetPosition(skillAreaWindow);
+        skillAreaWindow.CaptureMouse();
+    }
+
+    /// <summary>
+    /// 鼠标移动事件
+    /// </summary>
+    private void SkillAreaWindow_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (isDragging)
+        {
+            System.Windows.Point currentPoint = e.GetPosition(skillAreaWindow);
+            double deltaX = currentPoint.X - dragStartPoint.X;
+            double deltaY = currentPoint.Y - dragStartPoint.Y;
+            
+            skillAreaWindow.Left += deltaX;
+            skillAreaWindow.Top += deltaY;
+        }
+    }
+
+    /// <summary>
+    /// 鼠标释放事件
+    /// </summary>
+    private void SkillAreaWindow_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        isDragging = false;
+        skillAreaWindow.ReleaseMouseCapture();
+    }
+
+    /// <summary>
+    /// 加载技能区域配置
+    /// </summary>
+    private void LoadSkillArea()
+    {
+        try
+        {
+            string left = ConfigurationManager.AppSettings["SkillAreaLeft"];
+            string top = ConfigurationManager.AppSettings["SkillAreaTop"];
+            string width = ConfigurationManager.AppSettings["SkillAreaWidth"];
+            string height = ConfigurationManager.AppSettings["SkillAreaHeight"];
+            
+            if (!string.IsNullOrEmpty(left) && !string.IsNullOrEmpty(top) && !string.IsNullOrEmpty(width) && !string.IsNullOrEmpty(height))
+            {
+                skillAreaRect = new System.Drawing.Rectangle(
+                    int.Parse(left),
+                    int.Parse(top),
+                    int.Parse(width),
+                    int.Parse(height)
+                );
+            }
+            else
+            {
+                // 默认值
+                skillAreaRect = new System.Drawing.Rectangle(1200, 800, 40, 40);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"加载技能区域配置失败: {ex.Message}");
+            skillAreaRect = new System.Drawing.Rectangle(1200, 800, 40, 40);
+        }
+    }
+
+    /// <summary>
+    /// 保存技能区域配置
+    /// </summary>
+    private void SaveSkillArea()
+    {
+        try
+        {
+            Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            
+            // 确保配置项存在
+            if (config.AppSettings.Settings["SkillAreaLeft"] == null)
+                config.AppSettings.Settings.Add("SkillAreaLeft", skillAreaRect.Left.ToString());
+            else
+                config.AppSettings.Settings["SkillAreaLeft"].Value = skillAreaRect.Left.ToString();
+            
+            if (config.AppSettings.Settings["SkillAreaTop"] == null)
+                config.AppSettings.Settings.Add("SkillAreaTop", skillAreaRect.Top.ToString());
+            else
+                config.AppSettings.Settings["SkillAreaTop"].Value = skillAreaRect.Top.ToString();
+            
+            if (config.AppSettings.Settings["SkillAreaWidth"] == null)
+                config.AppSettings.Settings.Add("SkillAreaWidth", skillAreaRect.Width.ToString());
+            else
+                config.AppSettings.Settings["SkillAreaWidth"].Value = skillAreaRect.Width.ToString();
+            
+            if (config.AppSettings.Settings["SkillAreaHeight"] == null)
+                config.AppSettings.Settings.Add("SkillAreaHeight", skillAreaRect.Height.ToString());
+            else
+                config.AppSettings.Settings["SkillAreaHeight"].Value = skillAreaRect.Height.ToString();
+            
+            config.Save(ConfigurationSaveMode.Modified);
+            ConfigurationManager.RefreshSection("appSettings");
+            
+            System.Diagnostics.Debug.WriteLine($"技能区域已保存: {skillAreaRect}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"保存技能区域配置失败: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 加载锤子区域配置
+    /// </summary>
+    private void LoadHammerArea()
+    {
+        try
+        {
+            string left = ConfigurationManager.AppSettings["HammerAreaLeft"];
+            string top = ConfigurationManager.AppSettings["HammerAreaTop"];
+            string width = ConfigurationManager.AppSettings["HammerAreaWidth"];
+            string height = ConfigurationManager.AppSettings["HammerAreaHeight"];
+            
+            if (!string.IsNullOrEmpty(left) && !string.IsNullOrEmpty(top) && !string.IsNullOrEmpty(width) && !string.IsNullOrEmpty(height))
+            {
+                hammerAreaRect = new System.Drawing.Rectangle(
+                    int.Parse(left),
+                    int.Parse(top),
+                    int.Parse(width),
+                    int.Parse(height)
+                );
+            }
+            else
+            {
+                // 默认值
+                hammerAreaRect = new System.Drawing.Rectangle(1150, 800, 40, 40);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"加载锤子区域配置失败: {ex.Message}");
+            hammerAreaRect = new System.Drawing.Rectangle(1150, 800, 40, 40);
+        }
+    }
+
+    /// <summary>
+    /// 保存锤子区域配置
+    /// </summary>
+    private void SaveHammerArea()
+    {
+        try
+        {
+            Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            
+            // 确保配置项存在
+            if (config.AppSettings.Settings["HammerAreaLeft"] == null)
+                config.AppSettings.Settings.Add("HammerAreaLeft", hammerAreaRect.Left.ToString());
+            else
+                config.AppSettings.Settings["HammerAreaLeft"].Value = hammerAreaRect.Left.ToString();
+            
+            if (config.AppSettings.Settings["HammerAreaTop"] == null)
+                config.AppSettings.Settings.Add("HammerAreaTop", hammerAreaRect.Top.ToString());
+            else
+                config.AppSettings.Settings["HammerAreaTop"].Value = hammerAreaRect.Top.ToString();
+            
+            if (config.AppSettings.Settings["HammerAreaWidth"] == null)
+                config.AppSettings.Settings.Add("HammerAreaWidth", hammerAreaRect.Width.ToString());
+            else
+                config.AppSettings.Settings["HammerAreaWidth"].Value = hammerAreaRect.Width.ToString();
+            
+            if (config.AppSettings.Settings["HammerAreaHeight"] == null)
+                config.AppSettings.Settings.Add("HammerAreaHeight", hammerAreaRect.Height.ToString());
+            else
+                config.AppSettings.Settings["HammerAreaHeight"].Value = hammerAreaRect.Height.ToString();
+            
+            config.Save(ConfigurationSaveMode.Modified);
+            ConfigurationManager.RefreshSection("appSettings");
+            
+            System.Diagnostics.Debug.WriteLine($"锤子区域已保存: {hammerAreaRect}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"保存锤子区域配置失败: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 加载包大伯区域配置
+    /// </summary>
+    private void LoadBaodaboArea()
+    {
+        try
+        {
+            string left = ConfigurationManager.AppSettings["BaodaboAreaLeft"];
+            string top = ConfigurationManager.AppSettings["BaodaboAreaTop"];
+            string width = ConfigurationManager.AppSettings["BaodaboAreaWidth"];
+            string height = ConfigurationManager.AppSettings["BaodaboAreaHeight"];
+            
+            if (!string.IsNullOrEmpty(left) && !string.IsNullOrEmpty(top) && !string.IsNullOrEmpty(width) && !string.IsNullOrEmpty(height))
+            {
+                baodaboAreaRect = new System.Drawing.Rectangle(
+                    int.Parse(left),
+                    int.Parse(top),
+                    int.Parse(width),
+                    int.Parse(height)
+                );
+            }
+            else
+            {
+                // 默认值
+                baodaboAreaRect = new System.Drawing.Rectangle(1250, 800, 40, 40);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"加载包大伯区域配置失败: {ex.Message}");
+            baodaboAreaRect = new System.Drawing.Rectangle(1250, 800, 40, 40);
+        }
+    }
+
+    /// <summary>
+    /// 保存包大伯区域配置
+    /// </summary>
+    private void SaveBaodaboArea()
+    {
+        try
+        {
+            Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            
+            // 确保配置项存在
+            if (config.AppSettings.Settings["BaodaboAreaLeft"] == null)
+                config.AppSettings.Settings.Add("BaodaboAreaLeft", baodaboAreaRect.Left.ToString());
+            else
+                config.AppSettings.Settings["BaodaboAreaLeft"].Value = baodaboAreaRect.Left.ToString();
+            
+            if (config.AppSettings.Settings["BaodaboAreaTop"] == null)
+                config.AppSettings.Settings.Add("BaodaboAreaTop", baodaboAreaRect.Top.ToString());
+            else
+                config.AppSettings.Settings["BaodaboAreaTop"].Value = baodaboAreaRect.Top.ToString();
+            
+            if (config.AppSettings.Settings["BaodaboAreaWidth"] == null)
+                config.AppSettings.Settings.Add("BaodaboAreaWidth", baodaboAreaRect.Width.ToString());
+            else
+                config.AppSettings.Settings["BaodaboAreaWidth"].Value = baodaboAreaRect.Width.ToString();
+            
+            if (config.AppSettings.Settings["BaodaboAreaHeight"] == null)
+                config.AppSettings.Settings.Add("BaodaboAreaHeight", baodaboAreaRect.Height.ToString());
+            else
+                config.AppSettings.Settings["BaodaboAreaHeight"].Value = baodaboAreaRect.Height.ToString();
+            
+            config.Save(ConfigurationSaveMode.Modified);
+            ConfigurationManager.RefreshSection("appSettings");
+            
+            System.Diagnostics.Debug.WriteLine($"包大伯区域已保存: {baodaboAreaRect}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"保存包大伯区域配置失败: {ex.Message}");
+        }
+    }
+
+
+
+    /// <summary>
+    /// 显示/隐藏所有区域按钮点击事件
+    /// </summary>
+    private void btnShowAllAreas_Click(object sender, RoutedEventArgs e)
+    {
+        if (skillAreaWindow == null && hammerAreaWindow == null && baodaboAreaWindow == null)
+        {
+            // 显示所有区域
+            ShowSkillAreaWindow();
+            ShowHammerAreaWindow();
+            ShowBaodaboAreaWindow();
+            btnShowAllAreas.Content = "隐藏所有区域";
+        }
+        else
+        {
+            // 隐藏所有区域
+            HideSkillAreaWindow();
+            HideHammerAreaWindow();
+            HideBaodaboAreaWindow();
+            btnShowAllAreas.Content = "显示所有区域";
+        }
+    }
+
+    /// <summary>
+    /// 保存所有区域按钮点击事件
+    /// </summary>
+    private void btnSaveAllAreas_Click(object sender, RoutedEventArgs e)
+    {
+        // 隐藏所有区域并保存配置
+        HideSkillAreaWindow();
+        HideHammerAreaWindow();
+        HideBaodaboAreaWindow();
+        
+        SaveSkillArea();
+        SaveHammerArea();
+        SaveBaodaboArea();
+        
+        btnShowAllAreas.Content = "显示所有区域";
+        System.Windows.MessageBox.Show("所有区域已保存！", "提示");
     }
 
     private void cbAutoHammer_Checked(object sender, RoutedEventArgs e)
@@ -653,198 +1260,71 @@ public partial class MainWindow : WpfWindow
     {
         try
         {
-            // 优先检测包大伯建造图标
-            bool foundBuild = CheckImageOnScreen(@"d:\AutoBakNoDelete\Desktop\塔防江山谱DH_JSP\ThreeKingdomsHeroes\photos\包大伯.png");
-            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 检测到包大伯建造图标: {foundBuild}");
+            // 加载包大伯区域配置
+            LoadBaodaboArea();
             
-            if (foundBuild)
+            // 确保区域有效
+            if (baodaboAreaRect.Width <= 0 || baodaboAreaRect.Height <= 0)
             {
-                // 模拟按下W键
-                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 按下W键建造包大伯");
-                keybd_event((byte)VK_W, 0, KEYEVENTF_KEYDOWN, 0);
-                Thread.Sleep(50);
-                keybd_event((byte)VK_W, 0, KEYEVENTF_KEYUP, 0);
+                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯区域无效");
                 return;
             }
             
-            // 检测包大伯升级图标
-            bool foundUpgrade = CheckImageOnScreen(@"d:\AutoBakNoDelete\Desktop\塔防江山谱DH_JSP\ThreeKingdomsHeroes\photos\包大伯升级.png");
-            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 检测到包大伯升级图标: {foundUpgrade}");
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯区域: {baodaboAreaRect}");
             
-            if (foundUpgrade)
+            // 截取包大伯区域
+            using (var baodaboBmp = CaptureArea(baodaboAreaRect))
             {
-                // 模拟按下E键
-                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 按下E键升级包大伯");
-                keybd_event((byte)VK_E, 0, KEYEVENTF_KEYDOWN, 0);
-                Thread.Sleep(50);
-                keybd_event((byte)VK_E, 0, KEYEVENTF_KEYUP, 0);
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 检测包大伯图标失败: {ex.Message}");
-        }
-    }
-
-    private bool CheckImageOnScreen(string imagePath)
-    {
-        try
-        {
-            // 确保图像文件存在
-            if (!System.IO.File.Exists(imagePath))
-            {
-                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 图像文件不存在: {imagePath}");
-                return false;
-            }
-            
-            // 加载模板图像
-            using (var template = Cv2.ImRead(imagePath, ImreadModes.Color))
-            {
-                if (template.Empty())
+                // 将Bitmap转换为Mat
+                using (var baodaboMat = OpenCvSharp.Extensions.BitmapConverter.ToMat(baodaboBmp))
                 {
-                    System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 无法加载模板图像: {imagePath}");
-                    return false;
-                }
-                
-                // 捕获屏幕
-                using (var screenBmp = new Drawing.Bitmap(Forms.Screen.PrimaryScreen.Bounds.Width, Forms.Screen.PrimaryScreen.Bounds.Height))
-                {
-                    using (var g = Drawing.Graphics.FromImage(screenBmp))
-                    {
-                        g.CopyFromScreen(0, 0, 0, 0, screenBmp.Size);
-                    }
+                    // 计算图像亮度
+                    double brightness = CalculateBrightness(baodaboMat);
+                    System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯图标亮度: {brightness}");
                     
-                    // 将Bitmap保存到临时文件
-                    string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"screen_{DateTime.Now.ToString("HHmmssfff")}.bmp");
-                    screenBmp.Save(tempPath, Drawing.Imaging.ImageFormat.Bmp);
-                    
-                    // 加载屏幕图像
-                    using (var screenMat = Cv2.ImRead(tempPath, ImreadModes.Color))
+                    // 亮度阈值，需要根据实际游戏调整
+                    if (brightness > 100)
                     {
-                        // 删除临时文件
-                        System.IO.File.Delete(tempPath);
+                        // 优先模拟按下W键（建造）
+                        System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯图标就绪，按下W键建造");
+                        keybd_event((byte)VK_W, 0, KEYEVENTF_KEYDOWN, 0);
+                        Thread.Sleep(50);
+                        keybd_event((byte)VK_W, 0, KEYEVENTF_KEYUP, 0);
                         
-                        if (screenMat.Empty())
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 无法加载屏幕图像");
-                            return false;
-                        }
+                        // 短暂延迟，等待操作生效
+                        Thread.Sleep(100);
                         
-                        // 转换为灰度图像
-                        using (var grayScreen = new Mat())
-                        using (var grayTemplate = new Mat())
+                        // 再次检测，确认是否操作成功
+                        using (var checkBmp = CaptureArea(baodaboAreaRect))
+                        using (var checkMat = OpenCvSharp.Extensions.BitmapConverter.ToMat(checkBmp))
                         {
-                            Cv2.CvtColor(screenMat, grayScreen, ColorConversionCodes.BGR2GRAY);
-                            Cv2.CvtColor(template, grayTemplate, ColorConversionCodes.BGR2GRAY);
-                            
-                            // 直方图均衡化，提高对比度
-                            using (var equalizedScreen = new Mat())
+                            double checkBrightness = CalculateBrightness(checkMat);
+                            if (checkBrightness > 100)
                             {
-                                Cv2.EqualizeHist(grayScreen, equalizedScreen);
+                                // 如果仍然检测到图标，说明建造失败，尝试升级
+                                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 建造失败，尝试按下E键升级");
+                                keybd_event((byte)VK_E, 0, KEYEVENTF_KEYDOWN, 0);
+                                Thread.Sleep(50);
+                                keybd_event((byte)VK_E, 0, KEYEVENTF_KEYUP, 0);
                                 
-                                // 多尺度匹配
-                                double minVal = double.MaxValue;
-                                OpenCvSharp.Point minLoc = new OpenCvSharp.Point();
-                                double maxVal = double.MinValue;
-                                OpenCvSharp.Point maxLoc = new OpenCvSharp.Point();
+                                // 短暂延迟，等待操作生效
+                                Thread.Sleep(100);
                                 
-                                // 尝试不同的缩放比例
-                                for (double scale = 0.8; scale <= 1.2; scale += 0.1)
+                                // 再次检测，确认是否升级成功
+                                using (var checkUpgradeBmp = CaptureArea(baodaboAreaRect))
+                                using (var checkUpgradeMat = OpenCvSharp.Extensions.BitmapConverter.ToMat(checkUpgradeBmp))
                                 {
-                                    using (var resizedTemplate = new Mat())
+                                    double checkUpgradeBrightness = CalculateBrightness(checkUpgradeMat);
+                                    if (checkUpgradeBrightness > 100)
                                     {
-                                        Cv2.Resize(grayTemplate, resizedTemplate, new OpenCvSharp.Size(), scale, scale);
-                                        
-                                        // 确保模板尺寸小于屏幕尺寸
-                                        if (resizedTemplate.Rows > equalizedScreen.Rows || resizedTemplate.Cols > equalizedScreen.Cols)
-                                        {
-                                            continue;
-                                        }
-                                        
-                                        using (var result = new Mat())
-                                        {
-                                            // 使用多种匹配方法
-                                            OpenCvSharp.TemplateMatchModes[] methods = { 
-                                                OpenCvSharp.TemplateMatchModes.SqDiffNormed, 
-                                                OpenCvSharp.TemplateMatchModes.CCorrNormed, 
-                                                OpenCvSharp.TemplateMatchModes.CCoeffNormed 
-                                            };
-                                            
-                                            foreach (var method in methods)
-                                            {
-                                                Cv2.MatchTemplate(equalizedScreen, resizedTemplate, result, method);
-                                                Cv2.MinMaxLoc(result, out double methodMinVal, out double methodMaxVal, out OpenCvSharp.Point methodMinLoc, out OpenCvSharp.Point methodMaxLoc);
-                                                
-                                                // 记录最佳匹配
-                                                if (method == OpenCvSharp.TemplateMatchModes.SqDiffNormed)
-                                                {
-                                                    if (methodMinVal < minVal)
-                                                    {
-                                                        minVal = methodMinVal;
-                                                        minLoc = methodMinLoc;
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    if (methodMaxVal > maxVal)
-                                                    {
-                                                        maxVal = methodMaxVal;
-                                                        maxLoc = methodMaxLoc;
-                                                    }
-                                                }
-                                            }
-                                        }
+                                        // 如果仍然检测到图标，说明操作失败，使用鼠标点击
+                                        System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 操作失败，使用鼠标点击");
+                                        // 计算区域的中心位置
+                                        int centerX = baodaboAreaRect.Left + baodaboAreaRect.Width / 2;
+                                        int centerY = baodaboAreaRect.Top + baodaboAreaRect.Height / 2;
+                                        // 模拟鼠标点击
+                                        SimulateMouseClick(centerX, centerY);
                                     }
-                                }
-                                
-                                // 检查是否找到匹配
-                                bool foundMatch = false;
-                                
-                                // 对于SqDiffNormed，值越小越好
-                                if (minVal < 0.05)
-                                {
-                                    foundMatch = true;
-                                    System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 使用SqDiffNormed找到匹配，值: {minVal:F4}");
-                                }
-                                // 对于其他方法，值越大越好
-                                else if (maxVal > 0.95)
-                                {
-                                    foundMatch = true;
-                                    System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 使用其他方法找到匹配，值: {maxVal:F4}");
-                                }
-                                
-                                if (foundMatch)
-                                {
-                                    // 保存检测到的彩色图像，以便调试
-                                    /* 调试开始
-                                    try
-                                    {
-                                        // 创建保存目录
-                                        string saveDir = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(imagePath), "detected");
-                                        if (!System.IO.Directory.Exists(saveDir))
-                                        {
-                                            System.IO.Directory.CreateDirectory(saveDir);
-                                        }
-                                        
-                                        // 提取匹配区域（从彩色屏幕图像中提取）
-                                        int templateWidth = grayTemplate.Cols;
-                                        int templateHeight = grayTemplate.Rows;
-                                        var matchRegion = new OpenCvSharp.Rect(maxLoc.X, maxLoc.Y, templateWidth, templateHeight);
-                                        var regionMat = screenMat[matchRegion];
-                                        
-                                        // 保存彩色图像
-                                        string fileName = System.IO.Path.GetFileNameWithoutExtension(imagePath);
-                                        string savePath = System.IO.Path.Combine(saveDir, $"{fileName}_{DateTime.Now.ToString("HHmmssfff")}.png");
-                                        Cv2.ImWrite(savePath, regionMat);
-                                        System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 检测到的彩色图像已保存到: {savePath}");
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        System.Diagnostics.Debug.WriteLine($"保存检测图像失败: {ex.Message}");
-                                    }
-                                    调试结束 */
-                                    
-                                    return true;
                                 }
                             }
                         }
@@ -854,11 +1334,50 @@ public partial class MainWindow : WpfWindow
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 检测图像失败: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 检测包大伯图标失败: {ex.Message}");
         }
-        
-        return false;
     }
+
+    /// <summary>
+    /// 模拟鼠标点击
+    /// </summary>
+    private void SimulateMouseClick(int x, int y)
+    {
+        try
+        {
+            // 设置鼠标位置
+            SetCursorPos(x, y);
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 设置鼠标位置: ({x}, {y})");
+            
+            // 模拟鼠标左键按下
+            mouse_event(MOUSEEVENTF_LEFTDOWN, x, y, 0, 0);
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 模拟鼠标左键按下");
+            
+            // 短暂延迟
+            Thread.Sleep(50);
+            
+            // 模拟鼠标左键释放
+            mouse_event(MOUSEEVENTF_LEFTUP, x, y, 0, 0);
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 模拟鼠标左键释放");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 模拟鼠标点击失败: {ex.Message}");
+        }
+    }
+
+    // 鼠标事件常量
+    private const uint MOUSEEVENTF_LEFTDOWN = 0x02;
+    private const uint MOUSEEVENTF_LEFTUP = 0x04;
+
+    // 导入Windows API
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool SetCursorPos(int x, int y);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern void mouse_event(uint dwFlags, int dx, int dy, uint dwData, int dwExtraInfo);
+
+
 }
 
 public class Hero
