@@ -277,7 +277,7 @@ public partial class MainWindow : WpfWindow
             new Hero { Name = "小乔", Country = "吴" },
             new Hero { Name = "孙玲珑", Country = "吴" },
 
-            // 中立
+            // 群雄
             new Hero { Name = "董卓", Country = "群雄" },
             new Hero { Name = "袁绍", Country = "群雄" },
             new Hero { Name = "张角", Country = "群雄" },

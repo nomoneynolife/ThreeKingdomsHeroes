@@ -102,7 +102,7 @@
                     <Button x:Name="btnWei" Content="魏" Style="{StaticResource CategoryButtonStyle}" Click="btnWei_Click"/>
                     <Button x:Name="btnShu" Content="蜀" Style="{StaticResource CategoryButtonStyle}" Click="btnShu_Click"/>
                     <Button x:Name="btnWu" Content="吴" Style="{StaticResource CategoryButtonStyle}" Click="btnWu_Click"/>
-                    <Button x:Name="btnNeutral" Content="中立" Style="{StaticResource CategoryButtonStyle}" Click="btnNeutral_Click"/>
+                    <Button x:Name="btnNeutral" Content="群雄" Style="{StaticResource CategoryButtonStyle}" Click="btnNeutral_Click"/>
                 </StackPanel>
 
                 <!-- 武将显示区域 -->
