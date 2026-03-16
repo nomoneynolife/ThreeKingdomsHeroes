@@ -65,6 +65,27 @@ public partial class MainWindow : WpfWindow
 
     [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
     public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, uint dwExtraInfo);
+    
+    // SendInput相关结构体和函数
+    [DllImport("user32.dll")]
+    private static extern uint SendInput(uint nInputs, ref INPUT pInputs, int cbSize);
+    
+    [StructLayout(LayoutKind.Sequential)]
+    private struct INPUT
+    {
+        public int type;
+        public KEYBDINPUT u;
+    }
+    
+    [StructLayout(LayoutKind.Sequential)]
+    private struct KEYBDINPUT
+    {
+        public short wVk;
+        public short wScan;
+        public int dwFlags;
+        public int time;
+        public IntPtr dwExtraInfo;
+    }
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
@@ -377,7 +398,7 @@ public partial class MainWindow : WpfWindow
     {
         if (hammerTimer == null)
         {
-            int interval = GetIntervalFromConfig("HammerInterval", 2000);
+            int interval = GetIntervalFromConfig("HammerInterval", 80); // 将默认间隔从2000ms改为80ms，实现低延迟响应
             hammerTimer = new System.Threading.Timer(CheckProcessAndClick, null, 0, interval);
         }
     }
@@ -414,7 +435,7 @@ public partial class MainWindow : WpfWindow
     {
         if (baodaboTimer == null)
         {
-            int interval = GetIntervalFromConfig("BaodaboCheckInterval", 5000);
+            int interval = GetIntervalFromConfig("BaodaboCheckInterval", 80); // 将默认间隔从5000ms改为80ms，实现低延迟响应
             baodaboTimer = new System.Threading.Timer(CheckBaodaboIcons, null, 0, interval);
         }
     }
@@ -563,10 +584,10 @@ public partial class MainWindow : WpfWindow
                     System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 锤子图标亮度: {brightness}");
                     
                     // 亮度阈值，需要根据实际游戏调整
-                    if (brightness > 100)
+                    if (brightness > 80) // 降低阈值，适应游戏内的亮度
                     {
                         // 模拟右键点击
-                        System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 锤子就绪，执行右键点击");
+                        System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 锤子就绪，执行右键点击，亮度: {brightness}");
                         mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
                         Thread.Sleep(50);
                         mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
@@ -591,9 +612,7 @@ public partial class MainWindow : WpfWindow
             {
                 // 模拟F1键按下
                 System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 技能就绪，按下F1键");
-                keybd_event((byte)VK_F1, 0, KEYEVENTF_KEYDOWN, 0);
-                Thread.Sleep(30);
-                keybd_event((byte)VK_F1, 0, KEYEVENTF_KEYUP, 0);
+                SimulateKeyPress(VK_F1);
                 // 防止重复触发
                 Thread.Sleep(120);
             }
@@ -636,7 +655,7 @@ public partial class MainWindow : WpfWindow
                     System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 技能图标亮度: {brightness}");
                     
                     // 亮度阈值，需要根据实际游戏调整
-                    return brightness > 100;
+                    return brightness > 100; // 降低阈值，适应游戏内的亮度
                 }
             }
         }
@@ -652,14 +671,69 @@ public partial class MainWindow : WpfWindow
     /// </summary>
     private System.Drawing.Bitmap CaptureArea(System.Drawing.Rectangle rect)
     {
+        // 尝试使用Windows API截取整个屏幕
         var bmp = new System.Drawing.Bitmap(rect.Width, rect.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-        using (var g = System.Drawing.Graphics.FromImage(bmp))
+        
+        // 方法1: 使用Graphics.CopyFromScreen
+        try
         {
-            g.CopyFromScreen(rect.Left, rect.Top, 0, 0, rect.Size);
+            using (var g = System.Drawing.Graphics.FromImage(bmp))
+            {
+                g.CopyFromScreen(rect.Left, rect.Top, 0, 0, rect.Size);
+            }
+            return bmp;
         }
-        return bmp;
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"使用Graphics.CopyFromScreen截图失败: {ex.Message}");
+            // 方法2: 使用Windows API BitBlt
+            try
+            {
+                IntPtr hDC = System.Drawing.Graphics.FromHwnd(IntPtr.Zero).GetHdc();
+                IntPtr memDC = CreateCompatibleDC(hDC);
+                IntPtr hBitmap = CreateCompatibleBitmap(hDC, rect.Width, rect.Height);
+                IntPtr oldBitmap = SelectObject(memDC, hBitmap);
+                
+                BitBlt(memDC, 0, 0, rect.Width, rect.Height, hDC, rect.Left, rect.Top, SRCCOPY);
+                
+                SelectObject(memDC, oldBitmap);
+                DeleteDC(memDC);
+                System.Drawing.Graphics.FromHwnd(IntPtr.Zero).ReleaseHdc(hDC);
+                
+                System.Drawing.Bitmap bitmap = System.Drawing.Bitmap.FromHbitmap(hBitmap);
+                DeleteObject(hBitmap);
+                
+                return bitmap;
+            }
+            catch (Exception ex2)
+            {
+                System.Diagnostics.Debug.WriteLine($"使用BitBlt截图失败: {ex2.Message}");
+                return bmp; // 返回空位图
+            }
+        }
     }
-
+    
+    // Windows API 函数
+    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+    private static extern bool BitBlt(IntPtr hdcDest, int nXDest, int nYDest, int nWidth, int nHeight, IntPtr hdcSrc, int nXSrc, int nYSrc, int dwRop);
+    
+    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+    private static extern IntPtr CreateCompatibleDC(IntPtr hdc);
+    
+    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+    private static extern IntPtr CreateCompatibleBitmap(IntPtr hdc, int nWidth, int nHeight);
+    
+    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+    private static extern IntPtr SelectObject(IntPtr hdc, IntPtr hgdiobj);
+    
+    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+    private static extern bool DeleteDC(IntPtr hdc);
+    
+    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+    private static extern bool DeleteObject(IntPtr hgdiobj);
+    
+    private const int SRCCOPY = 0x00CC0020;
+    
     /// <summary>
     /// 计算图像亮度
     /// </summary>
@@ -675,12 +749,14 @@ public partial class MainWindow : WpfWindow
     // 区域调整相关字段
     private System.Windows.Window skillAreaWindow;
     private System.Windows.Window hammerAreaWindow;
-    private System.Windows.Window baodaboAreaWindow;
+    private System.Windows.Window baodaboAreaWindow; // 包大伯建造区域窗口（W键）
+    private System.Windows.Window baodaboEAreaWindow; // 包大伯升级区域窗口（E键）
     private bool isDragging = false;
     private System.Windows.Point dragStartPoint;
     private System.Drawing.Rectangle skillAreaRect;
     private System.Drawing.Rectangle hammerAreaRect;
-    private System.Drawing.Rectangle baodaboAreaRect;
+    private System.Drawing.Rectangle baodaboWAreaRect; // 包大伯建造区域（W键）
+    private System.Drawing.Rectangle baodaboEAreaRect; // 包大伯升级区域（E键）
 
     // 窗口相关API
     [System.Runtime.InteropServices.DllImport("user32.dll")]
@@ -840,12 +916,20 @@ public partial class MainWindow : WpfWindow
         // 加载保存的包大伯区域
         LoadBaodaboArea();
         
-        // 创建包大伯区域窗口
+        // 创建包大伯建造区域窗口
         baodaboAreaWindow = ShowAreaWindow(
-            "包大伯区域 (W/E)", 
-            "用于检测包大伯建造/升级图标，触发W/E键", 
-            baodaboAreaRect, 
-            System.Windows.Media.Color.FromArgb(50, 0, 0, 255)
+            "包大伯建造区域 (W)", 
+            "用于检测包大伯建造图标，触发W键", 
+            baodaboWAreaRect, 
+            System.Windows.Media.Color.FromArgb(50, 255, 0, 0)
+        );
+        
+        // 创建包大伯升级区域窗口
+        baodaboEAreaWindow = ShowAreaWindow(
+            "包大伯升级区域 (E)", 
+            "用于检测包大伯升级图标，触发E键", 
+            baodaboEAreaRect, 
+            System.Windows.Media.Color.FromArgb(50, 0, 255, 0)
         );
     }
 
@@ -857,8 +941,15 @@ public partial class MainWindow : WpfWindow
         if (baodaboAreaWindow != null)
         {
             // 保存当前窗口位置和大小
-            baodaboAreaRect = HideAreaWindow(baodaboAreaWindow);
+            baodaboWAreaRect = HideAreaWindow(baodaboAreaWindow);
             baodaboAreaWindow = null;
+        }
+        
+        if (baodaboEAreaWindow != null)
+        {
+            // 保存当前窗口位置和大小
+            baodaboEAreaRect = HideAreaWindow(baodaboEAreaWindow);
+            baodaboEAreaWindow = null;
         }
     }
 
@@ -1054,30 +1145,53 @@ public partial class MainWindow : WpfWindow
     {
         try
         {
-            string left = ConfigurationManager.AppSettings["BaodaboAreaLeft"];
-            string top = ConfigurationManager.AppSettings["BaodaboAreaTop"];
-            string width = ConfigurationManager.AppSettings["BaodaboAreaWidth"];
-            string height = ConfigurationManager.AppSettings["BaodaboAreaHeight"];
+            // 加载包大伯建造区域（W键）
+            string wLeft = ConfigurationManager.AppSettings["BaodaboWAreaLeft"];
+            string wTop = ConfigurationManager.AppSettings["BaodaboWAreaTop"];
+            string wWidth = ConfigurationManager.AppSettings["BaodaboWAreaWidth"];
+            string wHeight = ConfigurationManager.AppSettings["BaodaboWAreaHeight"];
             
-            if (!string.IsNullOrEmpty(left) && !string.IsNullOrEmpty(top) && !string.IsNullOrEmpty(width) && !string.IsNullOrEmpty(height))
+            if (!string.IsNullOrEmpty(wLeft) && !string.IsNullOrEmpty(wTop) && !string.IsNullOrEmpty(wWidth) && !string.IsNullOrEmpty(wHeight))
             {
-                baodaboAreaRect = new System.Drawing.Rectangle(
-                    int.Parse(left),
-                    int.Parse(top),
-                    int.Parse(width),
-                    int.Parse(height)
+                baodaboWAreaRect = new System.Drawing.Rectangle(
+                    int.Parse(wLeft),
+                    int.Parse(wTop),
+                    int.Parse(wWidth),
+                    int.Parse(wHeight)
                 );
             }
             else
             {
                 // 默认值
-                baodaboAreaRect = new System.Drawing.Rectangle(1250, 800, 40, 40);
+                baodaboWAreaRect = new System.Drawing.Rectangle(1250, 800, 40, 40);
+            }
+            
+            // 加载包大伯升级区域（E键）
+            string eLeft = ConfigurationManager.AppSettings["BaodaboEAreaLeft"];
+            string eTop = ConfigurationManager.AppSettings["BaodaboETop"];
+            string eWidth = ConfigurationManager.AppSettings["BaodaboEWidth"];
+            string eHeight = ConfigurationManager.AppSettings["BaodaboEHeight"];
+            
+            if (!string.IsNullOrEmpty(eLeft) && !string.IsNullOrEmpty(eTop) && !string.IsNullOrEmpty(eWidth) && !string.IsNullOrEmpty(eHeight))
+            {
+                baodaboEAreaRect = new System.Drawing.Rectangle(
+                    int.Parse(eLeft),
+                    int.Parse(eTop),
+                    int.Parse(eWidth),
+                    int.Parse(eHeight)
+                );
+            }
+            else
+            {
+                // 默认值
+                baodaboEAreaRect = new System.Drawing.Rectangle(1300, 800, 40, 40);
             }
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"加载包大伯区域配置失败: {ex.Message}");
-            baodaboAreaRect = new System.Drawing.Rectangle(1250, 800, 40, 40);
+            baodaboWAreaRect = new System.Drawing.Rectangle(1250, 800, 40, 40);
+            baodaboEAreaRect = new System.Drawing.Rectangle(1300, 800, 40, 40);
         }
     }
 
@@ -1090,31 +1204,53 @@ public partial class MainWindow : WpfWindow
         {
             Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
             
-            // 确保配置项存在
-            if (config.AppSettings.Settings["BaodaboAreaLeft"] == null)
-                config.AppSettings.Settings.Add("BaodaboAreaLeft", baodaboAreaRect.Left.ToString());
+            // 保存包大伯建造区域（W键）
+            if (config.AppSettings.Settings["BaodaboWAreaLeft"] == null)
+                config.AppSettings.Settings.Add("BaodaboWAreaLeft", baodaboWAreaRect.Left.ToString());
             else
-                config.AppSettings.Settings["BaodaboAreaLeft"].Value = baodaboAreaRect.Left.ToString();
+                config.AppSettings.Settings["BaodaboWAreaLeft"].Value = baodaboWAreaRect.Left.ToString();
             
-            if (config.AppSettings.Settings["BaodaboAreaTop"] == null)
-                config.AppSettings.Settings.Add("BaodaboAreaTop", baodaboAreaRect.Top.ToString());
+            if (config.AppSettings.Settings["BaodaboWAreaTop"] == null)
+                config.AppSettings.Settings.Add("BaodaboWAreaTop", baodaboWAreaRect.Top.ToString());
             else
-                config.AppSettings.Settings["BaodaboAreaTop"].Value = baodaboAreaRect.Top.ToString();
+                config.AppSettings.Settings["BaodaboWAreaTop"].Value = baodaboWAreaRect.Top.ToString();
             
-            if (config.AppSettings.Settings["BaodaboAreaWidth"] == null)
-                config.AppSettings.Settings.Add("BaodaboAreaWidth", baodaboAreaRect.Width.ToString());
+            if (config.AppSettings.Settings["BaodaboWAreaWidth"] == null)
+                config.AppSettings.Settings.Add("BaodaboWAreaWidth", baodaboWAreaRect.Width.ToString());
             else
-                config.AppSettings.Settings["BaodaboAreaWidth"].Value = baodaboAreaRect.Width.ToString();
+                config.AppSettings.Settings["BaodaboWAreaWidth"].Value = baodaboWAreaRect.Width.ToString();
             
-            if (config.AppSettings.Settings["BaodaboAreaHeight"] == null)
-                config.AppSettings.Settings.Add("BaodaboAreaHeight", baodaboAreaRect.Height.ToString());
+            if (config.AppSettings.Settings["BaodaboWAreaHeight"] == null)
+                config.AppSettings.Settings.Add("BaodaboWAreaHeight", baodaboWAreaRect.Height.ToString());
             else
-                config.AppSettings.Settings["BaodaboAreaHeight"].Value = baodaboAreaRect.Height.ToString();
+                config.AppSettings.Settings["BaodaboWAreaHeight"].Value = baodaboWAreaRect.Height.ToString();
+            
+            // 保存包大伯升级区域（E键）
+            if (config.AppSettings.Settings["BaodaboEAreaLeft"] == null)
+                config.AppSettings.Settings.Add("BaodaboEAreaLeft", baodaboEAreaRect.Left.ToString());
+            else
+                config.AppSettings.Settings["BaodaboEAreaLeft"].Value = baodaboEAreaRect.Left.ToString();
+            
+            if (config.AppSettings.Settings["BaodaboETop"] == null)
+                config.AppSettings.Settings.Add("BaodaboETop", baodaboEAreaRect.Top.ToString());
+            else
+                config.AppSettings.Settings["BaodaboETop"].Value = baodaboEAreaRect.Top.ToString();
+            
+            if (config.AppSettings.Settings["BaodaboEWidth"] == null)
+                config.AppSettings.Settings.Add("BaodaboEWidth", baodaboEAreaRect.Width.ToString());
+            else
+                config.AppSettings.Settings["BaodaboEWidth"].Value = baodaboEAreaRect.Width.ToString();
+            
+            if (config.AppSettings.Settings["BaodaboEHeight"] == null)
+                config.AppSettings.Settings.Add("BaodaboEHeight", baodaboEAreaRect.Height.ToString());
+            else
+                config.AppSettings.Settings["BaodaboEHeight"].Value = baodaboEAreaRect.Height.ToString();
             
             config.Save(ConfigurationSaveMode.Modified);
             ConfigurationManager.RefreshSection("appSettings");
             
-            System.Diagnostics.Debug.WriteLine($"包大伯区域已保存: {baodaboAreaRect}");
+            System.Diagnostics.Debug.WriteLine($"包大伯建造区域已保存: {baodaboWAreaRect}");
+            System.Diagnostics.Debug.WriteLine($"包大伯升级区域已保存: {baodaboEAreaRect}");
         }
         catch (Exception ex)
         {
@@ -1129,7 +1265,7 @@ public partial class MainWindow : WpfWindow
     /// </summary>
     private void btnShowAllAreas_Click(object sender, RoutedEventArgs e)
     {
-        if (skillAreaWindow == null && hammerAreaWindow == null && baodaboAreaWindow == null)
+        if (skillAreaWindow == null && hammerAreaWindow == null && baodaboAreaWindow == null && baodaboEAreaWindow == null)
         {
             // 显示所有区域
             ShowSkillAreaWindow();
@@ -1256,78 +1392,97 @@ public partial class MainWindow : WpfWindow
         }
     }
 
+    // 上次操作时间，用于防止重复触发
+    private DateTime lastBaodaboActionTime = DateTime.MinValue;
+    private const int BaodaboActionCooldown = 1000; // 操作冷却时间，单位：毫秒
+    
+    /// <summary>
+    /// 使用SendInput模拟按键操作
+    /// </summary>
+    private void SimulateKeyPress(uint vkCode)
+    {
+        INPUT input = new INPUT();
+        input.type = 1; // 1 = 键盘输入
+        
+        // 按下按键
+        input.u.wVk = (short)vkCode;
+        input.u.dwFlags = 0;
+        SendInput(1, ref input, System.Runtime.InteropServices.Marshal.SizeOf(input));
+        
+        Thread.Sleep(50);
+        
+        // 松开按键
+        input.u.dwFlags = 0x0002; // KEYEVENTF_KEYUP
+        SendInput(1, ref input, System.Runtime.InteropServices.Marshal.SizeOf(input));
+    }
+    
     private void CheckBaodaboIcons(object state)
     {
         try
         {
-            // 加载包大伯区域配置
-            LoadBaodaboArea();
-            
-            // 确保区域有效
-            if (baodaboAreaRect.Width <= 0 || baodaboAreaRect.Height <= 0)
+            // 检查冷却时间，防止重复触发
+            if ((DateTime.Now - lastBaodaboActionTime).TotalMilliseconds < BaodaboActionCooldown)
             {
-                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯区域无效");
                 return;
             }
             
-            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯区域: {baodaboAreaRect}");
+            // 加载包大伯区域配置
+            LoadBaodaboArea();
             
-            // 截取包大伯区域
-            using (var baodaboBmp = CaptureArea(baodaboAreaRect))
+            // 确保建造区域有效
+            if (baodaboWAreaRect.Width <= 0 || baodaboWAreaRect.Height <= 0)
             {
-                // 将Bitmap转换为Mat
-                using (var baodaboMat = OpenCvSharp.Extensions.BitmapConverter.ToMat(baodaboBmp))
+                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯建造区域无效");
+                return;
+            }
+            
+            // 确保升级区域有效
+            if (baodaboEAreaRect.Width <= 0 || baodaboEAreaRect.Height <= 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯升级区域无效");
+                return;
+            }
+            
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯建造区域: {baodaboWAreaRect}");
+            System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯升级区域: {baodaboEAreaRect}");
+            
+            // 优先检测建造图标（W键）
+            using (var wBmp = CaptureArea(baodaboWAreaRect))
+            {
+                using (var wMat = OpenCvSharp.Extensions.BitmapConverter.ToMat(wBmp))
                 {
-                    // 计算图像亮度
-                    double brightness = CalculateBrightness(baodaboMat);
-                    System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯图标亮度: {brightness}");
+                    double wBrightness = CalculateBrightness(wMat);
+                    System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯建造图标亮度: {wBrightness}");
                     
-                    // 亮度阈值，需要根据实际游戏调整
-                    if (brightness > 100)
+                    if (wBrightness > 60)
                     {
-                        // 优先模拟按下W键（建造）
-                        System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯图标就绪，按下W键建造");
-                        keybd_event((byte)VK_W, 0, KEYEVENTF_KEYDOWN, 0);
-                        Thread.Sleep(50);
-                        keybd_event((byte)VK_W, 0, KEYEVENTF_KEYUP, 0);
+                        // 模拟按下W键（建造）
+                        System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯建造图标就绪，按下W键建造");
+                        SimulateKeyPress(VK_W);
                         
-                        // 短暂延迟，等待操作生效
-                        Thread.Sleep(100);
+                        // 更新上次操作时间
+                        lastBaodaboActionTime = DateTime.Now;
+                        return; // 建造成功或尝试过建造，直接返回
+                    }
+                }
+            }
+            
+            // 如果建造图标未就绪，检测升级图标（E键）
+            using (var eBmp = CaptureArea(baodaboEAreaRect))
+            {
+                using (var eMat = OpenCvSharp.Extensions.BitmapConverter.ToMat(eBmp))
+                {
+                    double eBrightness = CalculateBrightness(eMat);
+                    System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯升级图标亮度: {eBrightness}");
+                    
+                    if (eBrightness > 60)
+                    {
+                        // 模拟按下E键（升级）
+                        System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯升级图标就绪，按下E键升级");
+                        SimulateKeyPress(VK_E);
                         
-                        // 再次检测，确认是否操作成功
-                        using (var checkBmp = CaptureArea(baodaboAreaRect))
-                        using (var checkMat = OpenCvSharp.Extensions.BitmapConverter.ToMat(checkBmp))
-                        {
-                            double checkBrightness = CalculateBrightness(checkMat);
-                            if (checkBrightness > 100)
-                            {
-                                // 如果仍然检测到图标，说明建造失败，尝试升级
-                                System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 建造失败，尝试按下E键升级");
-                                keybd_event((byte)VK_E, 0, KEYEVENTF_KEYDOWN, 0);
-                                Thread.Sleep(50);
-                                keybd_event((byte)VK_E, 0, KEYEVENTF_KEYUP, 0);
-                                
-                                // 短暂延迟，等待操作生效
-                                Thread.Sleep(100);
-                                
-                                // 再次检测，确认是否升级成功
-                                using (var checkUpgradeBmp = CaptureArea(baodaboAreaRect))
-                                using (var checkUpgradeMat = OpenCvSharp.Extensions.BitmapConverter.ToMat(checkUpgradeBmp))
-                                {
-                                    double checkUpgradeBrightness = CalculateBrightness(checkUpgradeMat);
-                                    if (checkUpgradeBrightness > 100)
-                                    {
-                                        // 如果仍然检测到图标，说明操作失败，使用鼠标点击
-                                        System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 操作失败，使用鼠标点击");
-                                        // 计算区域的中心位置
-                                        int centerX = baodaboAreaRect.Left + baodaboAreaRect.Width / 2;
-                                        int centerY = baodaboAreaRect.Top + baodaboAreaRect.Height / 2;
-                                        // 模拟鼠标点击
-                                        SimulateMouseClick(centerX, centerY);
-                                    }
-                                }
-                            }
-                        }
+                        // 更新上次操作时间
+                        lastBaodaboActionTime = DateTime.Now;
                     }
                 }
             }
