@@ -2,18 +2,11 @@ using System;
 using System.Configuration;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
-using System.Windows.Shapes;
-using System.Windows.Threading;
-using Drawing = System.Drawing;
-using Forms = System.Windows.Forms;
 using OpenCvSharp;
 
 // 解决Window类命名冲突
