@@ -65,27 +65,6 @@ public partial class MainWindow : WpfWindow
 
     [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
     public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, uint dwExtraInfo);
-    
-    // SendInput相关结构体和函数
-    [DllImport("user32.dll")]
-    private static extern uint SendInput(uint nInputs, ref INPUT pInputs, int cbSize);
-    
-    [StructLayout(LayoutKind.Sequential)]
-    private struct INPUT
-    {
-        public int type;
-        public KEYBDINPUT u;
-    }
-    
-    [StructLayout(LayoutKind.Sequential)]
-    private struct KEYBDINPUT
-    {
-        public short wVk;
-        public short wScan;
-        public int dwFlags;
-        public int time;
-        public IntPtr dwExtraInfo;
-    }
 
     [DllImport("user32.dll", SetLastError = true)]
     private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
@@ -615,7 +594,9 @@ public partial class MainWindow : WpfWindow
             {
                 // 模拟F1键按下
                 System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 技能就绪，按下F1键");
-                SimulateKeyPress(VK_F1);
+                keybd_event((byte)VK_F1, 0, KEYEVENTF_KEYDOWN, 0);
+                Thread.Sleep(30);
+                keybd_event((byte)VK_F1, 0, KEYEVENTF_KEYUP, 0);
                 // 防止重复触发
                 Thread.Sleep(120);
             }
@@ -1399,26 +1380,6 @@ public partial class MainWindow : WpfWindow
     private DateTime lastBaodaboActionTime = DateTime.MinValue;
     private const int BaodaboActionCooldown = 1000; // 操作冷却时间，单位：毫秒
     
-    /// <summary>
-    /// 使用SendInput模拟按键操作
-    /// </summary>
-    private void SimulateKeyPress(uint vkCode)
-    {
-        INPUT input = new INPUT();
-        input.type = 1; // 1 = 键盘输入
-        
-        // 按下按键
-        input.u.wVk = (short)vkCode;
-        input.u.dwFlags = 0;
-        SendInput(1, ref input, System.Runtime.InteropServices.Marshal.SizeOf(input));
-        
-        Thread.Sleep(50);
-        
-        // 松开按键
-        input.u.dwFlags = 0x0002; // KEYEVENTF_KEYUP
-        SendInput(1, ref input, System.Runtime.InteropServices.Marshal.SizeOf(input));
-    }
-    
     private void CheckBaodaboIcons(object state)
     {
         try
@@ -1461,7 +1422,9 @@ public partial class MainWindow : WpfWindow
                     {
                         // 模拟按下W键（建造）
                         System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯建造图标就绪，按下W键建造");
-                        SimulateKeyPress(VK_W);
+                        keybd_event((byte)VK_W, 0, KEYEVENTF_KEYDOWN, 0);
+                        Thread.Sleep(50);
+                        keybd_event((byte)VK_W, 0, KEYEVENTF_KEYUP, 0);
                         
                         // 更新上次操作时间
                         lastBaodaboActionTime = DateTime.Now;
@@ -1482,7 +1445,9 @@ public partial class MainWindow : WpfWindow
                     {
                         // 模拟按下E键（升级）
                         System.Diagnostics.Debug.WriteLine($"[{DateTime.Now.ToString("HH:mm:ss.fff")}] 包大伯升级图标就绪，按下E键升级");
-                        SimulateKeyPress(VK_E);
+                        keybd_event((byte)VK_E, 0, KEYEVENTF_KEYDOWN, 0);
+                        Thread.Sleep(50);
+                        keybd_event((byte)VK_E, 0, KEYEVENTF_KEYUP, 0);
                         
                         // 更新上次操作时间
                         lastBaodaboActionTime = DateTime.Now;
